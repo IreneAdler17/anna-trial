@@ -2,6 +2,7 @@
 import * as store from '../../lib/store.mjs';
 import * as pool from '../../lib/pool.mjs';
 import { buildEdit } from '../../lib/edit.mjs';
+import { loadCalibration } from '../../lib/calibrate.mjs';
 import { pushToUser } from '../../lib/push.mjs';
 import { sizedImage, json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
 
@@ -39,6 +40,16 @@ async function editPayload(user, edit) {
     id: edit.id, date: edit.edit_date,
     items: edit.items.map((i) => ({ ...publicItem(items[i.item_id]), bucket: i.bucket })).filter((i) => i.id && i.image_url),
   };
+}
+
+function kickCalibration() {
+  if (!process.env.URL) return;
+  return Promise.race([
+    fetch(`${process.env.URL}/.netlify/functions/build-calibration-background`, {
+      method: 'POST', headers: { 'x-anna-admin': process.env.ADMIN_KEY || '' },
+    }).catch(() => {}),
+    new Promise((r) => setTimeout(r, 1200)),
+  ]);
 }
 
 async function admin(req, url) {
@@ -83,6 +94,15 @@ async function admin(req, url) {
     return json({ VAPID_PUBLIC_KEY: b64u(ecdh.getPublicKey()), VAPID_PRIVATE_KEY: b64u(ecdh.getPrivateKey()),
       next: 'Add both as environment variables in Netlify, then redeploy.' });
   }
+  if (action === 'calibrate') {
+    await kickCalibration();
+    return json({ ok: true, note: 'Building the curated first-swipe set now. It takes a minute or two.' });
+  }
+  if (action === 'calibration') {
+    const c = await loadCalibration();
+    return json(c ? { created_at: c.created_at, curated: c.curated, stale: c.stale,
+      items: c.items.map((i) => `${i.attrs?.category || '?'} · ${i.brand || ''} · ${i.name || ''}`) } : { none: true });
+  }
   if (action === 'reset') {
     const user = await store.getUser(url.searchParams.get('u'));
     if (!user) return json({ error: 'no such user' }, 404);
@@ -110,8 +130,10 @@ export default async (req) => {
     if (route === 'me') return json(await stateFor(user));
 
     if (route === 'calibration') {
-      const items = await pool.calibrationSet(40);
-      await store.upsertItems(items);
+      const cached = await loadCalibration();
+      if (!cached || cached.stale) await kickCalibration();
+      const items = await pool.calibrationSet(40, { cached });
+      if (!cached) await store.upsertItems(items);
       return json({ items: items.map(publicItem) });
     }
 

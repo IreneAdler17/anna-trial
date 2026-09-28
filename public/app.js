@@ -100,6 +100,11 @@ function Deck(root, items, { withInfo = false, hint = false, context, editId, on
     bind(cur);
     shownAt = performance.now();
     preload(items[i + 2]);
+    // Wide photos (a flat-lay, a box) are shown whole rather than cropped to the card.
+    root.querySelectorAll('.card img').forEach((el) => {
+      const fit = () => { if (el.naturalWidth && el.naturalWidth > el.naturalHeight * 1.05) el.classList.add('wide'); };
+      el.complete ? fit() : el.addEventListener('load', fit, { once: true });
+    });
     // A picture that won't load is skipped quietly, never shown as a blank card.
     const im = cur.querySelector('img');
     const skip = () => { if (cur?.querySelector('img') === im && !busy) { items.splice(i, 1); render(); } };
