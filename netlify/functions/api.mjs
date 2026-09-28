@@ -28,7 +28,7 @@ async function stateFor(user) {
       drop_pretty: prettyTime(user.drop_time), shortcut_ok: user.shortcut_ok, most_you: user.most_you },
     today: { date, edit_ready: Boolean(edit) && minutes >= dropMins, edit_exists: Boolean(edit) },
     captures: { count: captures.length, latest: captures[0]?.created_at || null },
-    shortcut_url: process.env.SHORTCUT_URL || null,
+    shortcut_url: process.env.SHORTCUT_URL || 'https://www.icloud.com/shortcuts/84ee3bc70c824196a1abb4521cbcc4d5',
     vapid_public_key: process.env.VAPID_PUBLIC_KEY || null,
   };
 }
