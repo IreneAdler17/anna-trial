@@ -87,3 +87,15 @@ alter table anna_push     enable row level security;
 insert into storage.buckets (id, name, public)
 values ('anna-captures', 'anna-captures', false)
 on conflict (id) do nothing;
+
+-- A fast random spread of in-stock products with images (read-only). Used for the first swipes and
+-- tonight's candidates; offsets into a 300k-row table are too slow.
+create or replace function public.anna_sample(n integer default 400, pct real default 1.5)
+returns setof public.pipeline_products
+language sql volatile
+as $$
+  select * from public.pipeline_products tablesample bernoulli (pct)
+  where image_url is not null and coalesce(available, 0) > 0
+  order by random()
+  limit n;
+$$;
