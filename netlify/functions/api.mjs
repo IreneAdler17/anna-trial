@@ -83,6 +83,12 @@ async function admin(req, url) {
     return json({ VAPID_PUBLIC_KEY: b64u(ecdh.getPublicKey()), VAPID_PRIVATE_KEY: b64u(ecdh.getPrivateKey()),
       next: 'Add both as environment variables in Netlify, then redeploy.' });
   }
+  if (action === 'reset') {
+    const user = await store.getUser(url.searchParams.get('u'));
+    if (!user) return json({ error: 'no such user' }, 404);
+    await store.resetUser(user.id);
+    return json({ ok: true, link: `${siteUrl(req)}/?u=${user.id}&k=${user.key}` });
+  }
   if (action === 'push') {
     const user = await store.getUser(url.searchParams.get('u'));
     if (!user) return json({ error: 'no such user' }, 404);
@@ -136,6 +142,11 @@ export default async (req) => {
         ]);
       }
       return json(await stateFor(updated));
+    }
+
+    if (route === 'restart' && req.method === 'POST') {
+      const fresh = await store.resetUser(user.id);
+      return json(await stateFor(fresh));
     }
 
     if (route === 'mostyou') {

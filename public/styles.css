@@ -152,6 +152,8 @@ h1,.h1{margin:0;font-family:var(--serif);font-weight:400;font-size:36px;line-hei
 .iconrow{display:flex;align-items:center;gap:16px;font-size:17px}
 .iconrow .ic{width:44px;height:44px;border-radius:12px;background:rgba(42,36,32,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--serif);font-style:italic;font-size:24px}
 .arrowdown{display:flex;justify-content:center;animation:bob 1.6s ease-in-out infinite}
+.arrowdown.right{justify-content:flex-end;padding-right:22px}
+.iconrow .ic.dots{font-family:inherit;font-style:normal;font-size:13px;letter-spacing:1px}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
 
 /* end + kept */

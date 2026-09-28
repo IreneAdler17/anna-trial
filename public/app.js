@@ -381,12 +381,12 @@ function screenHomeScreen() {
     <h1 style="margin-top:14px">Put your Anna on your phone</h1>
     <p class="lede">For now she lives here, and brings you your edit each night. One day she’ll come with you into any app.</p>
     <div style="display:flex;flex-direction:column;gap:18px;margin-top:18px">
-      <div class="iconrow"><span class="ic">${ICON.share}</span>Tap Share at the bottom of Safari</div>
-      <div class="iconrow"><span class="ic">${ICON.addsq}</span>Choose Add to Home Screen</div>
+      <div class="iconrow"><span class="ic dots">•••</span>Tap ••• at the bottom right, then Share</div>
+      <div class="iconrow"><span class="ic">${ICON.addsq}</span>Choose Add to Home Screen (under View More)</div>
       <div class="iconrow"><span class="ic">A</span>Open Anna from the new icon</div>
     </div>
     <div class="grow"></div>
-    <div class="arrowdown" aria-hidden="true"><svg width="28" height="40" viewBox="0 0 28 40" fill="none" stroke="#2A2420" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v34M5 27l9 9 9-9"/></svg></div>`);
+    <div class="arrowdown right" aria-hidden="true"><svg width="28" height="40" viewBox="0 0 28 40" fill="none" stroke="#2A2420" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v34M5 27l9 9 9-9"/></svg></div>`);
 }
 
 function urlB64ToUint8Array(b64) {
@@ -528,6 +528,13 @@ const RESUME = { intro: screenIntro, calibrate: screenCalibrate, addanywhere: sc
 async function start() {
   if (!AUTH.u || !AUTH.k) return screenNoLink();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  if (qs.get('restart') === '1') {
+    // Re-testing: wipe where she was up to and start again from the intro.
+    try { Object.keys(localStorage).filter((k) => k.startsWith('anna-step-')).forEach((k) => localStorage.removeItem(k)); } catch {}
+    try { await api('restart', { method: 'POST', body: {} }); } catch (e) { return screenError(e); }
+    qs.delete('restart');
+    history.replaceState(null, '', `${location.pathname}?${qs}`);
+  }
   try { STATE = await api('me'); } catch (e) { return screenError(e); }
   const stage = STATE.user.stage;
   if (stage === 'ready' || qs.get('open') === 'edit') return screenHome();
