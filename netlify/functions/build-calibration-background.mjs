@@ -3,7 +3,8 @@
 import { buildCalibration } from '../../lib/calibrate.mjs';
 
 export default async (req) => {
-  if ((req.headers.get('x-anna-admin') || '') !== (process.env.ADMIN_KEY || '')) return new Response('forbidden', { status: 403 });
+  if ((req.headers.get('x-anna-admin') || '') !== (process.env.ADMIN_KEY || '')) { console.log('[calibrate] refused: no admin header'); return new Response('forbidden', { status: 403 }); }
+  console.log('[calibrate] start');
   try { await buildCalibration(); } catch (err) { console.error('[calibrate]', err); }
   return new Response('ok');
 };

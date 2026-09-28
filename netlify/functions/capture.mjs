@@ -1,6 +1,6 @@
 // Receives screenshots: from the double-tap Shortcut, and from "Add screenshots from Photos".
 import * as store from '../../lib/store.mjs';
-import { authUser, json, siteUrl } from '../../lib/util.mjs';
+import { authUser, json, siteUrl, kickBackground } from '../../lib/util.mjs';
 
 export const config = { path: '/capture' };
 
@@ -34,11 +34,7 @@ async function filesFrom(req) {
 
 function kick(req) {
   // Start reading the screenshot straight away in the background; the 15-minute tick is the backstop.
-  const url = `${siteUrl(req)}/.netlify/functions/process-captures-background`;
-  return Promise.race([
-    fetch(url, { method: 'POST', headers: { 'x-anna-admin': process.env.ADMIN_KEY || '' } }).catch(() => {}),
-    new Promise((r) => setTimeout(r, 1500)),
-  ]);
+  return kickBackground('process-captures-background', {}, siteUrl(req));
 }
 
 export default async (req) => {

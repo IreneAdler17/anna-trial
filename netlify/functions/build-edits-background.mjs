@@ -5,7 +5,8 @@ import { refreshFreshSources } from '../../lib/sources.mjs';
 import { localNow } from '../../lib/util.mjs';
 
 export default async (req) => {
-  if (req.headers.get('x-anna-admin') !== (process.env.ADMIN_KEY || '')) return;
+  if (req.headers.get('x-anna-admin') !== (process.env.ADMIN_KEY || '')) { console.log('[build-edits] refused: no admin header'); return; }
+  console.log('[build-edits] start');
   let body = {};
   try { body = await req.json(); } catch {}
   if (body.refreshSources) {

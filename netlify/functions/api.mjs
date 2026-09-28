@@ -4,7 +4,7 @@ import * as pool from '../../lib/pool.mjs';
 import { buildEdit } from '../../lib/edit.mjs';
 import { loadCalibration } from '../../lib/calibrate.mjs';
 import { pushToUser } from '../../lib/push.mjs';
-import { sizedImage, json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
+import { kickBackground, sizedImage, json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
 
 export const config = { path: '/api/*' };
 
@@ -42,14 +42,8 @@ async function editPayload(user, edit) {
   };
 }
 
-function kickCalibration() {
-  if (!process.env.URL) return;
-  return Promise.race([
-    fetch(`${process.env.URL}/.netlify/functions/build-calibration-background`, {
-      method: 'POST', headers: { 'x-anna-admin': process.env.ADMIN_KEY || '' },
-    }).catch(() => {}),
-    new Promise((r) => setTimeout(r, 1200)),
-  ]);
+function kickCalibration(req) {
+  return kickBackground('build-calibration-background', {}, siteUrl(req));
 }
 
 async function admin(req, url) {
@@ -95,7 +89,7 @@ async function admin(req, url) {
       next: 'Add both as environment variables in Netlify, then redeploy.' });
   }
   if (action === 'calibrate') {
-    await kickCalibration();
+    await kickCalibration(req);
     return json({ ok: true, note: 'Building the curated first-swipe set now. It takes a minute or two.' });
   }
   if (action === 'calibration') {
@@ -131,7 +125,7 @@ export default async (req) => {
 
     if (route === 'calibration') {
       const cached = await loadCalibration();
-      if (!cached || cached.stale) await kickCalibration();
+      if (!cached || cached.stale) await kickCalibration(req);
       const items = await pool.calibrationSet(40, { cached });
       if (!cached) await store.upsertItems(items);
       return json({ items: items.map(publicItem) });
@@ -153,15 +147,9 @@ export default async (req) => {
       if (['onboarding', 'homescreen', 'ready'].includes(body.stage)) patch.stage = body.stage;
       if (body.stage === 'ready' && !user.onboarded_at) patch.onboarded_at = new Date().toISOString();
       const updated = Object.keys(patch).length ? await store.updateUser(user.id, patch) : user;
-      if (body.stage === 'ready' && user.stage !== 'ready' && process.env.URL) {
+      if (body.stage === 'ready' && user.stage !== 'ready') {
         // Start her first edit now so it is ready by her drop time.
-        await Promise.race([
-          fetch(`${process.env.URL}/.netlify/functions/build-edits-background`, {
-            method: 'POST', headers: { 'content-type': 'application/json', 'x-anna-admin': process.env.ADMIN_KEY || '' },
-            body: JSON.stringify({ users: [user.id] }),
-          }).catch(() => {}),
-          new Promise((r) => setTimeout(r, 1500)),
-        ]);
+        await kickBackground('build-edits-background', { users: [user.id] }, siteUrl(req));
       }
       return json(await stateFor(updated));
     }

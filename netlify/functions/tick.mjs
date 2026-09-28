@@ -2,20 +2,14 @@
 // notification at each person's chosen time. Heavy work is handed to background functions.
 import * as store from '../../lib/store.mjs';
 import { pushToUser } from '../../lib/push.mjs';
-import { localNow, toMinutes } from '../../lib/util.mjs';
+import { localNow, toMinutes, kickBackground } from '../../lib/util.mjs';
 
 export const config = { schedule: '*/15 * * * *' };
 
 const BUILD_AHEAD_MINUTES = 180;
 
 async function trigger(name, body) {
-  const base = process.env.URL;
-  if (!base) return;
-  await fetch(`${base}/.netlify/functions/${name}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-anna-admin': process.env.ADMIN_KEY || '' },
-    body: JSON.stringify(body || {}),
-  }).catch((e) => console.error('[tick] trigger', name, e.message));
+  await kickBackground(name, body || {});
 }
 
 export default async () => {
