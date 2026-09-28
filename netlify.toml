@@ -6,12 +6,6 @@
   node_bundler = "esbuild"
   included_files = ["config/**"]
 
-# The phone app is a single page; every unknown path serves it.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 [[headers]]
   for = "/sw.js"
   [headers.values]
