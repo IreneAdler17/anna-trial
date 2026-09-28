@@ -50,11 +50,18 @@ export default async (req) => {
   const files = (await filesFrom(req)).filter((f) => f.bytes.length > 1000 && f.bytes.length <= MAX_BYTES).slice(0, 10);
   if (!files.length) return isShortcut ? new Response('Nothing came through — try again.', { status: 400 }) : json({ error: 'no image' }, 400);
 
-  for (const f of files) {
-    const ext = f.type.includes('png') ? 'png' : f.type.includes('webp') ? 'webp' : 'jpg';
-    const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    await store.uploadCaptureFile(filePath, f.bytes, f.type);
-    await store.addCapture({ user_id: user.id, via: isShortcut ? 'backtap' : 'photos', image_path: filePath });
+  try {
+    for (const f of files) {
+      const ext = f.type.includes('png') ? 'png' : f.type.includes('webp') ? 'webp' : 'jpg';
+      const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      await store.uploadCaptureFile(filePath, f.bytes, f.type);
+      await store.addCapture({ user_id: user.id, via: isShortcut ? 'backtap' : 'photos', image_path: filePath });
+    }
+  } catch (err) {
+    console.error('[capture]', user.id, err);
+    return isShortcut
+      ? new Response('Anna missed that one. Double-tap again.', { status: 200, headers: { 'content-type': 'text/plain; charset=utf-8' } })
+      : json({ error: 'Anna missed those. Try again.' }, 500);
   }
   if (isShortcut && !user.shortcut_ok) await store.updateUser(user.id, { shortcut_ok: true });
   await kick(req);

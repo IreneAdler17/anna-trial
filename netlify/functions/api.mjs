@@ -3,13 +3,13 @@ import * as store from '../../lib/store.mjs';
 import * as pool from '../../lib/pool.mjs';
 import { buildEdit } from '../../lib/edit.mjs';
 import { pushToUser } from '../../lib/push.mjs';
-import { json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
+import { sizedImage, json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
 
 export const config = { path: '/api/*' };
 
 function publicItem(it) {
   if (!it) return null;
-  return { id: it.id, image_url: it.image_url, brand: it.brand, name: it.name, price: it.price,
+  return { id: it.id, image_url: sizedImage(it.image_url, 900), brand: it.brand, name: it.name, price: it.price,
     currency: it.currency, url: it.url, source: it.source };
 }
 

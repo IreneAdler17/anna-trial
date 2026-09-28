@@ -100,6 +100,11 @@ function Deck(root, items, { withInfo = false, hint = false, context, editId, on
     bind(cur);
     shownAt = performance.now();
     preload(items[i + 2]);
+    // A picture that won't load is skipped quietly, never shown as a blank card.
+    const im = cur.querySelector('img');
+    const skip = () => { if (cur?.querySelector('img') === im && !busy) { items.splice(i, 1); render(); } };
+    im.addEventListener('error', skip, { once: true });
+    if (im.complete && im.naturalWidth === 0 && im.src) skip();
   }
 
   function stopHint() {
