@@ -2,7 +2,7 @@
 import * as store from '../../lib/store.mjs';
 import * as pool from '../../lib/pool.mjs';
 import { buildEdit } from '../../lib/edit.mjs';
-import { loadCalibration } from '../../lib/calibrate.mjs';
+import { loadCalibration, needsBuild } from '../../lib/calibrate.mjs';
 import { pushToUser } from '../../lib/push.mjs';
 import { isAdmin, kickBackground, sizedImage, json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
 
@@ -125,10 +125,12 @@ export default async (req) => {
 
     if (route === 'calibration') {
       const cached = await loadCalibration();
-      if (!cached || cached.stale) await kickCalibration(req);
-      const items = await pool.calibrationSet(40, { cached });
-      if (!cached) await store.upsertItems(items);
-      return json({ items: items.map(publicItem) });
+      if (await needsBuild(cached)) await kickCalibration(req);
+      const useCached = cached?.curated ? cached : null;
+      const items = await pool.calibrationSet(40, { cached: useCached });
+      if (!useCached) await store.upsertItems(items);
+      return json({ items: items.map(publicItem), curated: Boolean(useCached),
+        build: cached ? { at: cached.created_at, curated: cached.curated, note: cached.note, candidates: cached.candidates, count: cached.items.length } : null });
     }
 
     if (route === 'events' && req.method === 'POST') {
