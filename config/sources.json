@@ -1,0 +1,4 @@
+{
+  "_how": "Fresh sources for Anna's wider edit, mostly wildcards. type 'shopify' reads https://<domain>/products.json. bucket is a hint for Claude: wildcard | adjacent | new. Add or remove freely; changes take effect on the next daily refresh.",
+  "sources": []
+}

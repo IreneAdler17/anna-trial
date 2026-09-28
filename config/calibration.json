@@ -1,0 +1,4 @@
+{
+  "_how": "Optional. Pipeline row ids for the first-swipe calibration set (up to 40). Leave empty and Anna picks a wide spread automatically, one piece per retailer.",
+  "ids": []
+}

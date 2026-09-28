@@ -1,0 +1,1082 @@
+[
+ {
+  "id": "pipe:mock264",
+  "kind": "pipeline",
+  "source": "shop0.example",
+  "image_url": "/dev-img/264.jpg",
+  "brand": "[Brand A]",
+  "name": "Rose-print bandana top",
+  "price": 40,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "top",
+   "colour": "rose print"
+  }
+ },
+ {
+  "id": "pipe:mock244",
+  "kind": "pipeline",
+  "source": "shop1.example",
+  "image_url": "/dev-img/244.jpg",
+  "brand": "[Brand B]",
+  "name": "Striped two-tone side stool",
+  "price": 57,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "object",
+   "colour": "natural wood"
+  }
+ },
+ {
+  "id": "pipe:mock238",
+  "kind": "pipeline",
+  "source": "shop2.example",
+  "image_url": "/dev-img/238.jpg",
+  "brand": "[Brand C]",
+  "name": "Lacquer hairbrush",
+  "price": 74,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "object",
+   "colour": "burgundy"
+  }
+ },
+ {
+  "id": "pipe:mock249",
+  "kind": "pipeline",
+  "source": "shop3.example",
+  "image_url": "/dev-img/249.jpg",
+  "brand": "[Brand D]",
+  "name": "Belted cotton trench",
+  "price": 91,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "coat",
+   "colour": "red"
+  }
+ },
+ {
+  "id": "pipe:mock257",
+  "kind": "pipeline",
+  "source": "shop4.example",
+  "image_url": "/dev-img/257.jpg",
+  "brand": "[Brand E]",
+  "name": "Boxed candle",
+  "price": 108,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "cream"
+  }
+ },
+ {
+  "id": "pipe:mock234",
+  "kind": "pipeline",
+  "source": "shop5.example",
+  "image_url": "/dev-img/234.jpg",
+  "brand": "[Brand F]",
+  "name": "Origami bag charm",
+  "price": 125,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "accessory",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock260",
+  "kind": "pipeline",
+  "source": "shop6.example",
+  "image_url": "/dev-img/260.jpg",
+  "brand": "[Brand G]",
+  "name": "Painting, woman in sunhat",
+  "price": 142,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "warm"
+  }
+ },
+ {
+  "id": "pipe:mock255",
+  "kind": "pipeline",
+  "source": "shop7.example",
+  "image_url": "/dev-img/255.jpg",
+  "brand": "[Brand H]",
+  "name": "Rose-gold flip-flops",
+  "price": 159,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "shoes",
+   "colour": "rose gold"
+  }
+ },
+ {
+  "id": "pipe:mock232",
+  "kind": "pipeline",
+  "source": "shop8.example",
+  "image_url": "/dev-img/232.jpg",
+  "brand": "[Brand I]",
+  "name": "Ceramic cabriole-leg stand",
+  "price": 176,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "white"
+  }
+ },
+ {
+  "id": "pipe:mock245",
+  "kind": "pipeline",
+  "source": "shop9.example",
+  "image_url": "/dev-img/245.jpg",
+  "brand": "[Brand J]",
+  "name": "Risograph print",
+  "price": 193,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "peach"
+  }
+ },
+ {
+  "id": "pipe:mock240",
+  "kind": "pipeline",
+  "source": "shop10.example",
+  "image_url": "/dev-img/240.jpg",
+  "brand": "[Brand K]",
+  "name": "Tartan lamp",
+  "price": 210,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "tartan"
+  }
+ },
+ {
+  "id": "pipe:mock233",
+  "kind": "pipeline",
+  "source": "shop11.example",
+  "image_url": "/dev-img/233.jpg",
+  "brand": "[Brand L]",
+  "name": "Pair of tumblers",
+  "price": 227,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "glassware",
+   "colour": "clear"
+  }
+ },
+ {
+  "id": "pipe:mock241",
+  "kind": "pipeline",
+  "source": "shop0.example",
+  "image_url": "/dev-img/241.jpg",
+  "brand": "[Brand M]",
+  "name": "Woven-wrapped oil bottle",
+  "price": 244,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "natural"
+  }
+ },
+ {
+  "id": "pipe:mock256",
+  "kind": "pipeline",
+  "source": "shop1.example",
+  "image_url": "/dev-img/256.jpg",
+  "brand": "[Brand N]",
+  "name": "Knit polo and shorts",
+  "price": 261,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "knitwear",
+   "colour": "orange"
+  }
+ },
+ {
+  "id": "pipe:mock242",
+  "kind": "pipeline",
+  "source": "shop2.example",
+  "image_url": "/dev-img/242.jpg",
+  "brand": "[Brand O]",
+  "name": "Wall-hung textile art",
+  "price": 278,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock250",
+  "kind": "pipeline",
+  "source": "shop3.example",
+  "image_url": "/dev-img/250.jpg",
+  "brand": "[Brand P]",
+  "name": "Grey sweatshirt",
+  "price": 295,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "top",
+   "colour": "grey"
+  }
+ },
+ {
+  "id": "pipe:mock248",
+  "kind": "pipeline",
+  "source": "shop4.example",
+  "image_url": "/dev-img/248.jpg",
+  "brand": "[Brand Q]",
+  "name": "Cream shirt",
+  "price": 312,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "shirt",
+   "colour": "cream"
+  }
+ },
+ {
+  "id": "pipe:mock252",
+  "kind": "pipeline",
+  "source": "shop5.example",
+  "image_url": "/dev-img/252.jpg",
+  "brand": "[Brand R]",
+  "name": "Mohair collared vest",
+  "price": 329,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "knitwear",
+   "colour": "pink"
+  }
+ },
+ {
+  "id": "pipe:mock261",
+  "kind": "pipeline",
+  "source": "shop6.example",
+  "image_url": "/dev-img/261.jpg",
+  "brand": "[Brand S]",
+  "name": "Tennis racquet bag",
+  "price": 346,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "bag",
+   "colour": "green"
+  }
+ },
+ {
+  "id": "pipe:mock267",
+  "kind": "pipeline",
+  "source": "shop7.example",
+  "image_url": "/dev-img/267.jpg",
+  "brand": "[Brand T]",
+  "name": "Crochet bucket hat",
+  "price": 363,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "hat",
+   "colour": "yellow"
+  }
+ },
+ {
+  "id": "pipe:mock247",
+  "kind": "pipeline",
+  "source": "shop8.example",
+  "image_url": "/dev-img/247.jpg",
+  "brand": "[Brand U]",
+  "name": "Crinkle swimsuit",
+  "price": 380,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "swim",
+   "colour": "red"
+  }
+ },
+ {
+  "id": "pipe:mock226",
+  "kind": "pipeline",
+  "source": "shop9.example",
+  "image_url": "/dev-img/226.jpg",
+  "brand": "[Brand V]",
+  "name": "Daisy-print swimsuit",
+  "price": 397,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "swim",
+   "colour": "blue"
+  }
+ },
+ {
+  "id": "pipe:mock221",
+  "kind": "pipeline",
+  "source": "shop10.example",
+  "image_url": "/dev-img/221.jpg",
+  "brand": "[Brand W]",
+  "name": "Woven leather tote",
+  "price": 414,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "bag",
+   "colour": "two-tone"
+  }
+ },
+ {
+  "id": "pipe:mock253",
+  "kind": "pipeline",
+  "source": "shop11.example",
+  "image_url": "/dev-img/253.jpg",
+  "brand": "[Brand X]",
+  "name": "Hand-knit fringed dress",
+  "price": 431,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "dress",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock264-b",
+  "kind": "pipeline",
+  "source": "shop5.example",
+  "image_url": "/dev-img/264.jpg",
+  "brand": "[Brand A]",
+  "name": "Rose-print bandana top",
+  "price": 51,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "top",
+   "colour": "rose print"
+  }
+ },
+ {
+  "id": "pipe:mock244-b",
+  "kind": "pipeline",
+  "source": "shop6.example",
+  "image_url": "/dev-img/244.jpg",
+  "brand": "[Brand B]",
+  "name": "Striped two-tone side stool",
+  "price": 68,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "object",
+   "colour": "natural wood"
+  }
+ },
+ {
+  "id": "pipe:mock238-b",
+  "kind": "pipeline",
+  "source": "shop7.example",
+  "image_url": "/dev-img/238.jpg",
+  "brand": "[Brand C]",
+  "name": "Lacquer hairbrush",
+  "price": 85,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "object",
+   "colour": "burgundy"
+  }
+ },
+ {
+  "id": "pipe:mock249-b",
+  "kind": "pipeline",
+  "source": "shop8.example",
+  "image_url": "/dev-img/249.jpg",
+  "brand": "[Brand D]",
+  "name": "Belted cotton trench",
+  "price": 102,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "coat",
+   "colour": "red"
+  }
+ },
+ {
+  "id": "pipe:mock257-b",
+  "kind": "pipeline",
+  "source": "shop9.example",
+  "image_url": "/dev-img/257.jpg",
+  "brand": "[Brand E]",
+  "name": "Boxed candle",
+  "price": 119,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "cream"
+  }
+ },
+ {
+  "id": "pipe:mock234-b",
+  "kind": "pipeline",
+  "source": "shop10.example",
+  "image_url": "/dev-img/234.jpg",
+  "brand": "[Brand F]",
+  "name": "Origami bag charm",
+  "price": 136,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "accessory",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock260-b",
+  "kind": "pipeline",
+  "source": "shop11.example",
+  "image_url": "/dev-img/260.jpg",
+  "brand": "[Brand G]",
+  "name": "Painting, woman in sunhat",
+  "price": 153,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "warm"
+  }
+ },
+ {
+  "id": "pipe:mock255-b",
+  "kind": "pipeline",
+  "source": "shop0.example",
+  "image_url": "/dev-img/255.jpg",
+  "brand": "[Brand H]",
+  "name": "Rose-gold flip-flops",
+  "price": 170,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "shoes",
+   "colour": "rose gold"
+  }
+ },
+ {
+  "id": "pipe:mock232-b",
+  "kind": "pipeline",
+  "source": "shop1.example",
+  "image_url": "/dev-img/232.jpg",
+  "brand": "[Brand I]",
+  "name": "Ceramic cabriole-leg stand",
+  "price": 187,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "white"
+  }
+ },
+ {
+  "id": "pipe:mock245-b",
+  "kind": "pipeline",
+  "source": "shop2.example",
+  "image_url": "/dev-img/245.jpg",
+  "brand": "[Brand J]",
+  "name": "Risograph print",
+  "price": 204,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "peach"
+  }
+ },
+ {
+  "id": "pipe:mock240-b",
+  "kind": "pipeline",
+  "source": "shop3.example",
+  "image_url": "/dev-img/240.jpg",
+  "brand": "[Brand K]",
+  "name": "Tartan lamp",
+  "price": 221,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "tartan"
+  }
+ },
+ {
+  "id": "pipe:mock233-b",
+  "kind": "pipeline",
+  "source": "shop4.example",
+  "image_url": "/dev-img/233.jpg",
+  "brand": "[Brand L]",
+  "name": "Pair of tumblers",
+  "price": 238,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "glassware",
+   "colour": "clear"
+  }
+ },
+ {
+  "id": "pipe:mock241-b",
+  "kind": "pipeline",
+  "source": "shop5.example",
+  "image_url": "/dev-img/241.jpg",
+  "brand": "[Brand M]",
+  "name": "Woven-wrapped oil bottle",
+  "price": 255,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "natural"
+  }
+ },
+ {
+  "id": "pipe:mock256-b",
+  "kind": "pipeline",
+  "source": "shop6.example",
+  "image_url": "/dev-img/256.jpg",
+  "brand": "[Brand N]",
+  "name": "Knit polo and shorts",
+  "price": 272,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "knitwear",
+   "colour": "orange"
+  }
+ },
+ {
+  "id": "pipe:mock242-b",
+  "kind": "pipeline",
+  "source": "shop7.example",
+  "image_url": "/dev-img/242.jpg",
+  "brand": "[Brand O]",
+  "name": "Wall-hung textile art",
+  "price": 289,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock250-b",
+  "kind": "pipeline",
+  "source": "shop8.example",
+  "image_url": "/dev-img/250.jpg",
+  "brand": "[Brand P]",
+  "name": "Grey sweatshirt",
+  "price": 306,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "top",
+   "colour": "grey"
+  }
+ },
+ {
+  "id": "pipe:mock248-b",
+  "kind": "pipeline",
+  "source": "shop9.example",
+  "image_url": "/dev-img/248.jpg",
+  "brand": "[Brand Q]",
+  "name": "Cream shirt",
+  "price": 323,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "shirt",
+   "colour": "cream"
+  }
+ },
+ {
+  "id": "pipe:mock252-b",
+  "kind": "pipeline",
+  "source": "shop10.example",
+  "image_url": "/dev-img/252.jpg",
+  "brand": "[Brand R]",
+  "name": "Mohair collared vest",
+  "price": 340,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "knitwear",
+   "colour": "pink"
+  }
+ },
+ {
+  "id": "pipe:mock261-b",
+  "kind": "pipeline",
+  "source": "shop11.example",
+  "image_url": "/dev-img/261.jpg",
+  "brand": "[Brand S]",
+  "name": "Tennis racquet bag",
+  "price": 357,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "bag",
+   "colour": "green"
+  }
+ },
+ {
+  "id": "pipe:mock267-b",
+  "kind": "pipeline",
+  "source": "shop0.example",
+  "image_url": "/dev-img/267.jpg",
+  "brand": "[Brand T]",
+  "name": "Crochet bucket hat",
+  "price": 374,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "hat",
+   "colour": "yellow"
+  }
+ },
+ {
+  "id": "pipe:mock247-b",
+  "kind": "pipeline",
+  "source": "shop1.example",
+  "image_url": "/dev-img/247.jpg",
+  "brand": "[Brand U]",
+  "name": "Crinkle swimsuit",
+  "price": 391,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "swim",
+   "colour": "red"
+  }
+ },
+ {
+  "id": "pipe:mock226-b",
+  "kind": "pipeline",
+  "source": "shop2.example",
+  "image_url": "/dev-img/226.jpg",
+  "brand": "[Brand V]",
+  "name": "Daisy-print swimsuit",
+  "price": 408,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "swim",
+   "colour": "blue"
+  }
+ },
+ {
+  "id": "pipe:mock221-b",
+  "kind": "pipeline",
+  "source": "shop3.example",
+  "image_url": "/dev-img/221.jpg",
+  "brand": "[Brand W]",
+  "name": "Woven leather tote",
+  "price": 425,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "bag",
+   "colour": "two-tone"
+  }
+ },
+ {
+  "id": "pipe:mock253-b",
+  "kind": "pipeline",
+  "source": "shop4.example",
+  "image_url": "/dev-img/253.jpg",
+  "brand": "[Brand X]",
+  "name": "Hand-knit fringed dress",
+  "price": 442,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "dress",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock264-c",
+  "kind": "pipeline",
+  "source": "shop10.example",
+  "image_url": "/dev-img/264.jpg",
+  "brand": "[Brand A]",
+  "name": "Rose-print bandana top",
+  "price": 62,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "top",
+   "colour": "rose print"
+  }
+ },
+ {
+  "id": "pipe:mock244-c",
+  "kind": "pipeline",
+  "source": "shop11.example",
+  "image_url": "/dev-img/244.jpg",
+  "brand": "[Brand B]",
+  "name": "Striped two-tone side stool",
+  "price": 79,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "object",
+   "colour": "natural wood"
+  }
+ },
+ {
+  "id": "pipe:mock238-c",
+  "kind": "pipeline",
+  "source": "shop0.example",
+  "image_url": "/dev-img/238.jpg",
+  "brand": "[Brand C]",
+  "name": "Lacquer hairbrush",
+  "price": 96,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "object",
+   "colour": "burgundy"
+  }
+ },
+ {
+  "id": "pipe:mock249-c",
+  "kind": "pipeline",
+  "source": "shop1.example",
+  "image_url": "/dev-img/249.jpg",
+  "brand": "[Brand D]",
+  "name": "Belted cotton trench",
+  "price": 113,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "coat",
+   "colour": "red"
+  }
+ },
+ {
+  "id": "pipe:mock257-c",
+  "kind": "pipeline",
+  "source": "shop2.example",
+  "image_url": "/dev-img/257.jpg",
+  "brand": "[Brand E]",
+  "name": "Boxed candle",
+  "price": 130,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "cream"
+  }
+ },
+ {
+  "id": "pipe:mock234-c",
+  "kind": "pipeline",
+  "source": "shop3.example",
+  "image_url": "/dev-img/234.jpg",
+  "brand": "[Brand F]",
+  "name": "Origami bag charm",
+  "price": 147,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "accessory",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock260-c",
+  "kind": "pipeline",
+  "source": "shop4.example",
+  "image_url": "/dev-img/260.jpg",
+  "brand": "[Brand G]",
+  "name": "Painting, woman in sunhat",
+  "price": 164,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "warm"
+  }
+ },
+ {
+  "id": "pipe:mock255-c",
+  "kind": "pipeline",
+  "source": "shop5.example",
+  "image_url": "/dev-img/255.jpg",
+  "brand": "[Brand H]",
+  "name": "Rose-gold flip-flops",
+  "price": 181,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "shoes",
+   "colour": "rose gold"
+  }
+ },
+ {
+  "id": "pipe:mock232-c",
+  "kind": "pipeline",
+  "source": "shop6.example",
+  "image_url": "/dev-img/232.jpg",
+  "brand": "[Brand I]",
+  "name": "Ceramic cabriole-leg stand",
+  "price": 198,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "white"
+  }
+ },
+ {
+  "id": "pipe:mock245-c",
+  "kind": "pipeline",
+  "source": "shop7.example",
+  "image_url": "/dev-img/245.jpg",
+  "brand": "[Brand J]",
+  "name": "Risograph print",
+  "price": 215,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "peach"
+  }
+ },
+ {
+  "id": "pipe:mock240-c",
+  "kind": "pipeline",
+  "source": "shop8.example",
+  "image_url": "/dev-img/240.jpg",
+  "brand": "[Brand K]",
+  "name": "Tartan lamp",
+  "price": 232,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "tartan"
+  }
+ },
+ {
+  "id": "pipe:mock233-c",
+  "kind": "pipeline",
+  "source": "shop9.example",
+  "image_url": "/dev-img/233.jpg",
+  "brand": "[Brand L]",
+  "name": "Pair of tumblers",
+  "price": 249,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "glassware",
+   "colour": "clear"
+  }
+ },
+ {
+  "id": "pipe:mock241-c",
+  "kind": "pipeline",
+  "source": "shop10.example",
+  "image_url": "/dev-img/241.jpg",
+  "brand": "[Brand M]",
+  "name": "Woven-wrapped oil bottle",
+  "price": 266,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "homewares",
+   "colour": "natural"
+  }
+ },
+ {
+  "id": "pipe:mock256-c",
+  "kind": "pipeline",
+  "source": "shop11.example",
+  "image_url": "/dev-img/256.jpg",
+  "brand": "[Brand N]",
+  "name": "Knit polo and shorts",
+  "price": 283,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "knitwear",
+   "colour": "orange"
+  }
+ },
+ {
+  "id": "pipe:mock242-c",
+  "kind": "pipeline",
+  "source": "shop0.example",
+  "image_url": "/dev-img/242.jpg",
+  "brand": "[Brand O]",
+  "name": "Wall-hung textile art",
+  "price": 300,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "art",
+   "colour": "multi"
+  }
+ },
+ {
+  "id": "pipe:mock250-c",
+  "kind": "pipeline",
+  "source": "shop1.example",
+  "image_url": "/dev-img/250.jpg",
+  "brand": "[Brand P]",
+  "name": "Grey sweatshirt",
+  "price": 317,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "top",
+   "colour": "grey"
+  }
+ },
+ {
+  "id": "pipe:mock248-c",
+  "kind": "pipeline",
+  "source": "shop2.example",
+  "image_url": "/dev-img/248.jpg",
+  "brand": "[Brand Q]",
+  "name": "Cream shirt",
+  "price": 334,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "shirt",
+   "colour": "cream"
+  }
+ },
+ {
+  "id": "pipe:mock252-c",
+  "kind": "pipeline",
+  "source": "shop3.example",
+  "image_url": "/dev-img/252.jpg",
+  "brand": "[Brand R]",
+  "name": "Mohair collared vest",
+  "price": 351,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "knitwear",
+   "colour": "pink"
+  }
+ },
+ {
+  "id": "pipe:mock261-c",
+  "kind": "pipeline",
+  "source": "shop4.example",
+  "image_url": "/dev-img/261.jpg",
+  "brand": "[Brand S]",
+  "name": "Tennis racquet bag",
+  "price": 368,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "bag",
+   "colour": "green"
+  }
+ },
+ {
+  "id": "pipe:mock267-c",
+  "kind": "pipeline",
+  "source": "shop5.example",
+  "image_url": "/dev-img/267.jpg",
+  "brand": "[Brand T]",
+  "name": "Crochet bucket hat",
+  "price": 385,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "hat",
+   "colour": "yellow"
+  }
+ },
+ {
+  "id": "pipe:mock247-c",
+  "kind": "pipeline",
+  "source": "shop6.example",
+  "image_url": "/dev-img/247.jpg",
+  "brand": "[Brand U]",
+  "name": "Crinkle swimsuit",
+  "price": 402,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "swim",
+   "colour": "red"
+  }
+ },
+ {
+  "id": "pipe:mock226-c",
+  "kind": "pipeline",
+  "source": "shop7.example",
+  "image_url": "/dev-img/226.jpg",
+  "brand": "[Brand V]",
+  "name": "Daisy-print swimsuit",
+  "price": 419,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "swim",
+   "colour": "blue"
+  }
+ },
+ {
+  "id": "pipe:mock221-c",
+  "kind": "pipeline",
+  "source": "shop8.example",
+  "image_url": "/dev-img/221.jpg",
+  "brand": "[Brand W]",
+  "name": "Woven leather tote",
+  "price": 436,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "bag",
+   "colour": "two-tone"
+  }
+ },
+ {
+  "id": "pipe:mock253-c",
+  "kind": "pipeline",
+  "source": "shop9.example",
+  "image_url": "/dev-img/253.jpg",
+  "brand": "[Brand X]",
+  "name": "Hand-knit fringed dress",
+  "price": 453,
+  "url": "https://example.com",
+  "first_seen": null,
+  "attrs": {
+   "category": "dress",
+   "colour": "multi"
+  }
+ }
+]
