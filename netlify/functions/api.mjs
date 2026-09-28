@@ -4,7 +4,7 @@ import * as pool from '../../lib/pool.mjs';
 import { buildEdit } from '../../lib/edit.mjs';
 import { loadCalibration } from '../../lib/calibrate.mjs';
 import { pushToUser } from '../../lib/push.mjs';
-import { kickBackground, sizedImage, json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
+import { isAdmin, kickBackground, sizedImage, json, authUser, localNow, toMinutes, prettyTime, siteUrl, slugify, randomKey } from '../../lib/util.mjs';
 
 export const config = { path: '/api/*' };
 
@@ -47,7 +47,7 @@ function kickCalibration(req) {
 }
 
 async function admin(req, url) {
-  if (!process.env.ADMIN_KEY || url.searchParams.get('admin') !== process.env.ADMIN_KEY) return json({ error: 'forbidden' }, 403);
+  if (!isAdmin(url.searchParams.get('admin'))) return json({ error: 'forbidden' }, 403);
   const action = url.searchParams.get('action');
   if (action === 'add') {
     const name = url.searchParams.get('name');
