@@ -8,10 +8,12 @@ import { isAdmin, kickBackground, sizedImage, json, authUser, localNow, toMinute
 
 export const config = { path: '/api/*' };
 
-function publicItem(it) {
+function publicItem(it, layout = null) {
   if (!it) return null;
+  const lay = layout || it.layout || null;
   return { id: it.id, image_url: sizedImage(it.image_url, 900), brand: it.brand, name: it.name, price: it.price,
-    currency: it.currency, url: it.url, source: it.source };
+    currency: it.currency, url: it.url, source: it.source,
+    layout: lay ? { template: lay.template || null, aspect: lay.aspect ?? null, cutout: lay.cutout ? `/cutout/${lay.cutout}.png` : null } : null };
 }
 
 async function readBody(req) {
@@ -36,9 +38,13 @@ async function stateFor(user) {
 
 async function editPayload(user, edit) {
   const items = await store.getItems(edit.items.map((i) => i.item_id));
+  // The issue number: how many edits she has had up to and including this one.
+  const all = await store.listEdits(user.id, { limit: 400 });
+  const no = all.filter((e) => e.edit_date <= edit.edit_date).length || 1;
+  const weekday = new Date(`${edit.edit_date}T12:00:00`).toLocaleDateString('en-AU', { weekday: 'long' });
   return {
-    id: edit.id, date: edit.edit_date,
-    items: edit.items.map((i) => ({ ...publicItem(items[i.item_id]), bucket: i.bucket })).filter((i) => i.id && i.image_url),
+    id: edit.id, date: edit.edit_date, no, weekday,
+    items: edit.items.map((i) => ({ ...publicItem(items[i.item_id], i.template ? i : null), bucket: i.bucket })).filter((i) => i.id && i.image_url),
   };
 }
 

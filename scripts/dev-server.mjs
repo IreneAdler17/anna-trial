@@ -10,6 +10,7 @@ const PORT = Number(process.env.PORT || 8888);
 
 const api = (await import(path.join(root, 'netlify/functions/api.mjs'))).default;
 const capture = (await import(path.join(root, 'netlify/functions/capture.mjs'))).default;
+const cutout = (await import(path.join(root, 'netlify/functions/cutout.mjs'))).default;
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
 
@@ -23,11 +24,12 @@ function serveFile(res, file) {
 http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   try {
-    if (url.pathname.startsWith('/api/') || url.pathname === '/capture') {
+    if (url.pathname.startsWith('/api/') || url.pathname === '/capture' || url.pathname.startsWith('/cutout/')) {
       const chunks = []; for await (const c of req) chunks.push(c);
       const body = chunks.length ? Buffer.concat(chunks) : undefined;
       const request = new Request(url, { method: req.method, headers: req.headers, body: req.method === 'GET' ? undefined : body, duplex: 'half' });
-      const out = await (url.pathname === '/capture' ? capture : api)(request);
+      const fn = url.pathname === '/capture' ? capture : url.pathname.startsWith('/cutout/') ? cutout : api;
+      const out = await fn(request);
       res.writeHead(out.status, Object.fromEntries(out.headers));
       res.end(Buffer.from(await out.arrayBuffer()));
       return;

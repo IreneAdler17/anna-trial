@@ -1,4 +1,5 @@
 // Anna — the phone app. One page, no framework: screens are rendered into #app.
+// Design v2 (30 Sep 2026): the night is an issue — a cover, then twelve pages, each built one of four ways.
 const $app = document.getElementById('app');
 const $photo = document.getElementById('photo-input');
 const qs = new URLSearchParams(location.search);
@@ -18,6 +19,38 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const money = (p, cur = 'AUD') => (p == null ? '' : `${cur === 'AUD' ? '$' : cur + ' '}${Math.round(p).toLocaleString('en-AU')}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const authQS = () => `u=${encodeURIComponent(AUTH.u || '')}&k=${encodeURIComponent(AUTH.k || '')}`;
+
+// Shops send brand names every which way; the headline wants them as a name.
+function brandName(b) {
+  const s = String(b || '').trim();
+  if (!s) return '';
+  if (s === s.toUpperCase() && s.length > 3) return s.toLowerCase().replace(/(^|[\s\-&'’.])([a-z])/g, (m, p, c) => p + c.toUpperCase());
+  return s;
+}
+// A shop's domain reads better as a name: "orla.com.au" → "Orla".
+function retailerName(src) {
+  const s = String(src || '').replace(/^www\./, '').split('.')[0].replace(/[-_]+/g, ' ');
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+const priceLine = (it) => [money(it.price, it.currency), it.source ? `at ${retailerName(it.source)}` : ''].filter(Boolean);
+
+// The Behind headline: two balanced lines, sized so the longer one fits the width. 134px ceiling, 56px floor.
+function headline(brand, width) {
+  const words = brandName(brand).split(/\s+/).filter(Boolean);
+  let a = words.join(' '), b = '';
+  if (words.length > 1) {
+    let best = null;
+    for (let i = 1; i < words.length; i++) {
+      const l1 = words.slice(0, i).join(' '), l2 = words.slice(i).join(' ');
+      const score = Math.abs(l1.length - l2.length);
+      if (best === null || score < best.score) best = { l1, l2, score };
+    }
+    a = best.l1; b = best.l2;
+  }
+  const longest = Math.max(a.length, b.length, 1);
+  const size = Math.max(56, Math.min(134, Math.floor((width - 28) / (0.56 * longest))));
+  return { a, b, size };
+}
 
 async function api(path, { method = 'GET', body, extra = '' } = {}) {
   const r = await fetch(`/api/${path}?${authQS()}${extra}`, {
@@ -53,114 +86,157 @@ function show(html, cls = '') {
 }
 function saveStep(step) { try { localStorage.setItem(`anna-step-${AUTH.u}`, step); } catch {} }
 function savedStep() { try { return localStorage.getItem(`anna-step-${AUTH.u}`); } catch { return null; } }
+function seenHint() { try { return localStorage.getItem('anna-hint') === '1'; } catch { return false; } }
+function markHint() { try { localStorage.setItem('anna-hint', '1'); } catch {} }
 
 const ICON = {
-  heart: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A2420" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
-  right: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A2420" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
-  left: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A2420" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
-  x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6E6358" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
-  close: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A2420" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-  out: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EDE7DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>',
-  plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E6358" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-  tick: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EDE7DD" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
-  share: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2A2420" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>',
-  addsq: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2A2420" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>',
-  bell: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2A2420" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+  addsq: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/><path d="M12 8v8M8 12h8"/></svg>',
 };
 
-// ---------- the swipe deck (calibration and nightly edit) ----------
-function Deck(root, items, { withInfo = false, hint = false, context, editId, onDone, onTap }) {
-  let i = 0, startX = null, dx = 0, moved = false, busy = false, shownAt = 0, hinting = hint;
+// ---------- the pages ----------
+// Which way a piece is built. The server decides when it has measured the photo and tried a cut-out;
+// otherwise the phone falls back to Landscape (a wide photo) or Printed tail.
+function templateOf(it) {
+  const t = it.layout?.template;
+  if (t === 'behind' && it.layout?.cutout) return 'behind';
+  if (t === 'product' && it.layout?.cutout) return 'product';
+  if (t === 'landscape' || (it.layout?.aspect && it.layout.aspect > 1.05) || it._wide) return 'landscape';
+  return 'tail';
+}
+
+function pageHTML(it, width) {
+  const img = `<img class="ph" src="${esc(it.image_url)}" alt="${esc([it.brand, it.name].filter(Boolean).join(', '))}" referrerpolicy="no-referrer" draggable="false">`;
+  const cut = it.layout?.cutout ? `<img class="cut" src="${esc(it.layout.cutout)}" alt="" draggable="false">` : '';
+  const pr = priceLine(it);
+  switch (templateOf(it)) {
+    case 'behind': {
+      const h = headline(it.brand || it.source, width);
+      return `<div class="page behind">${img}<div class="head" style="font-size:${h.size}px"><div>${esc(h.a)}</div>${h.b ? `<div>${esc(h.b)}</div>` : ''}</div>${cut}
+        <div class="credit"><span>${esc(it.name || '')}</span>${pr.map((p) => `<span class="b">${esc(p)}</span>`).join('')}</div></div>`;
+    }
+    case 'product': {
+      const h = headline(it.brand || it.source, 9999);
+      return `<div class="page product"><div class="top"><div class="brand">${esc(h.a)}${h.b ? `<br>${esc(h.b)}` : ''}</div><div class="name">${esc(it.name || '')}</div></div>
+        <img class="obj" src="${esc(it.layout.cutout)}" alt="${esc(it.name || '')}" draggable="false">
+        <div class="credit">${pr.map((p) => `<span class="b">${esc(p)}</span>`).join('')}</div></div>`;
+    }
+    case 'landscape':
+      return `<div class="page landscape"><div><div class="row"><span class="brand">${esc(brandName(it.brand || it.source))}</span><span class="name">${esc(it.name || '')}</span><span class="pr">${esc(pr.join(' · '))}</span></div>
+        <img class="wide" src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer" draggable="false"></div></div>`;
+    default:
+      return `<div class="page tail">${img}<div class="block"></div><img class="print" src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer" draggable="false">
+        <div class="meta"><div class="brand">${esc(brandName(it.brand || it.source))}</div><div class="name">${esc(it.name || '')}</div><div class="pr">${pr.map((p) => `<span>${esc(p)}</span>`).join('')}</div></div></div>`;
+  }
+}
+
+function coverHTML(edit, it) {
+  const cut = it?.layout?.cutout ? `<img class="cut" src="${esc(it.layout.cutout)}" alt="" draggable="false">` : '';
+  return `<div class="page cover">${it ? `<img class="ph" src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer" draggable="false">` : ''}
+    <div class="mast" aria-label="Anna">An<br>na</div>${cut}
+    <div class="issue"><div class="no">No. ${esc(edit.no || 1)}</div><div class="day">${esc(edit.weekday || '')}</div></div></div>`;
+}
+
+// ---------- the deck: cover (optional) then pages to swipe ----------
+function Deck(root, items, { cover = null, hint = false, context, editId, onDone, onTap }) {
+  let i = 0, startX = null, dx = 0, moved = false, busy = false, shownAt = 0;
+  let hinting = hint && !seenHint();
   let cur = null;
+  const width = root.clientWidth || 390;
+  const isCover = () => cover && i === -1;
+  if (cover) i = -1;
 
-  const cardHTML = (it, cls) => `
-    <div class="card ${withInfo ? 'with-info' : 'photo-only'} ${cls}">
-      <img src="${esc(it.image_url)}" alt="${esc([it.brand, it.name].filter(Boolean).join(', '))}" referrerpolicy="no-referrer" draggable="false">
-      ${withInfo ? `<div class="info">
-        <div class="row"><span class="brand">${esc(it.brand || '')}</span><span class="price">${esc(money(it.price, it.currency))}</span></div>
-        <div class="row"><span class="pname">${esc(it.name || '')}</span><span class="retailer">${esc(it.source || '')}</span></div>
-      </div>` : ''}
-      <div class="warm"></div>
-      ${cls.includes('hint') ? `<div class="chip love">${ICON.heart}${ICON.right}</div><div class="chip pass">${ICON.left}${ICON.x}</div>` : ''}
-    </div>`;
+  function preload(it) { if (it) { const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = it.image_url; if (it.layout?.cutout) { const c = new Image(); c.src = it.layout.cutout; } } }
 
-  function preload(it) { if (it) { const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = it.image_url; } }
+  function html(k) { return k === -1 ? coverHTML(cover, items[0]) : pageHTML(items[k], width); }
 
   function render() {
     root.innerHTML = '';
+    root.className = 'deck' + (hinting && i === 0 ? ' hinting' : '');
     if (i >= items.length) { onDone?.(); return; }
     const frag = document.createElement('div');
-    frag.innerHTML = (items[i + 1] ? cardHTML(items[i + 1], 'next') : '') + cardHTML(items[i], hinting && i === 0 ? 'hint' : '');
+    frag.innerHTML = (i + 1 < items.length ? html(i + 1).replace('class="page', 'class="page under') : '') + html(i);
     root.append(...frag.children);
     cur = root.lastElementChild;
-    if (hinting && i === 0) root.insertAdjacentHTML('beforeend', '<div class="finger" aria-hidden="true"></div>');
-    root.insertAdjacentHTML('beforeend', '<button class="sr" data-k="love">Love it</button><button class="sr" data-k="pass">Not for me</button>');
-    root.querySelector('[data-k=love]').onclick = () => decide(1);
-    root.querySelector('[data-k=pass]').onclick = () => decide(-1);
+    if (hinting && i === 0) cur.classList.add('hint');
+    if (!isCover()) root.insertAdjacentHTML('beforeend', '<button class="sr" data-k="love">Love it</button><button class="sr" data-k="pass">Not for me</button>');
+    root.querySelector('[data-k=love]')?.addEventListener('click', () => decide(1));
+    root.querySelector('[data-k=pass]')?.addEventListener('click', () => decide(-1));
     bind(cur);
     shownAt = performance.now();
     preload(items[i + 2]);
-    // Wide photos (a flat-lay, a box) are shown whole rather than cropped to the card.
-    root.querySelectorAll('.card img').forEach((el) => {
-      const fit = () => { if (el.naturalWidth && el.naturalWidth > el.naturalHeight * 1.05) el.classList.add('wide'); };
-      el.complete ? fit() : el.addEventListener('load', fit, { once: true });
-    });
-    // A picture that won't load is skipped quietly, never shown as a blank card.
-    const im = cur.querySelector('img');
-    const skip = () => { if (cur?.querySelector('img') === im && !busy) { items.splice(i, 1); render(); } };
-    im.addEventListener('error', skip, { once: true });
-    if (im.complete && im.naturalWidth === 0 && im.src) skip();
+    // No server layout yet (the first swipes): a wide photo becomes a Landscape page once it has loaded.
+    const it = items[i];
+    if (it && !isCover() && !it.layout?.template && !it._wide) {
+      const im = cur.querySelector('img.ph, img.wide');
+      const fit = () => { if (im.naturalWidth && im.naturalWidth > im.naturalHeight * 1.05 && templateOf(it) !== 'landscape') { it._wide = true; if (cur?.isConnected && !busy) render(); } };
+      if (im) { im.complete ? fit() : im.addEventListener('load', fit, { once: true }); }
+    }
+    // A picture that won't load is skipped quietly, never shown as a blank page.
+    const im = cur.querySelector('img.ph, img.wide, img.obj');
+    if (im && !isCover()) {
+      const skip = () => { if (cur?.isConnected && !busy) { items.splice(i, 1); render(); } };
+      im.addEventListener('error', skip, { once: true });
+      if (im.complete && im.naturalWidth === 0 && im.src) skip();
+    }
   }
 
   function stopHint() {
     if (!hinting) return;
-    hinting = false;
-    cur.classList.remove('hint');
-    root.querySelector('.finger')?.remove();
+    hinting = false; markHint();
+    cur.classList.remove('hint'); root.classList.remove('hinting');
   }
 
-  function bind(card) {
-    const img = card.querySelector('img');
-    card.addEventListener('pointerdown', (e) => {
+  function ground(d) { root.classList.toggle('warm', d > 8); root.classList.toggle('cool', d < -8); }
+
+  function bind(page) {
+    page.addEventListener('pointerdown', (e) => {
       if (busy) return;
       stopHint();
       startX = e.clientX; dx = 0; moved = false;
-      try { card.setPointerCapture(e.pointerId); } catch {}
-      card.style.transition = 'none';
+      try { page.setPointerCapture(e.pointerId); } catch {}
+      page.style.transition = 'none';
     });
-    card.addEventListener('pointermove', (e) => {
+    page.addEventListener('pointermove', (e) => {
       if (startX === null) return;
       dx = e.clientX - startX;
       if (Math.abs(dx) > 6) moved = true;
-      card.style.transform = `translateX(${dx}px) rotate(${dx / 22}deg)`;
-      img.style.filter = dx < 0 ? `grayscale(${Math.min(0.9, (-dx / 140) * 0.9)})` : '';
+      page.style.transform = `translateX(${dx}px) rotate(${dx / 17}deg)`;
+      if (!isCover()) { page.style.opacity = dx < 0 ? String(Math.max(0.35, 1 - (-dx / 220) * 0.6)) : '1'; ground(dx); }
     });
     const end = () => {
       if (startX === null) return;
       startX = null;
-      if (!moved) { card.style.transform = ''; onTap?.(items[i]); return; }
+      if (!moved) { page.style.transform = ''; page.style.opacity = ''; ground(0); if (isCover()) advance(); else onTap?.(items[i]); return; }
+      if (isCover()) { if (Math.abs(dx) > 60) advance(dx < 0 ? -1 : 1); else { page.style.transition = 'transform .23s ease-out'; page.style.transform = ''; } return; }
       if (dx > 90) decide(1);
       else if (dx < -90) decide(-1);
-      else { card.style.transition = 'transform .23s ease-out'; card.style.transform = ''; img.style.filter = ''; }
+      else { page.style.transition = 'transform .23s ease-out, opacity .23s ease-out'; page.style.transform = ''; page.style.opacity = ''; ground(0); }
     };
-    card.addEventListener('pointerup', end);
-    card.addEventListener('pointercancel', () => { startX = null; card.style.transform = ''; img.style.filter = ''; });
+    page.addEventListener('pointerup', end);
+    page.addEventListener('pointercancel', () => { startX = null; page.style.transform = ''; page.style.opacity = ''; ground(0); });
+  }
+
+  function advance(dir = -1) {
+    busy = true;
+    const page = cur;
+    page.style.transition = 'transform .28s ease-in, opacity .28s ease-in';
+    page.style.transform = `translateX(${dir * 120}%) rotate(${dir * 4}deg)`;
+    setTimeout(() => { i++; busy = false; ground(0); render(); }, 280);
   }
 
   function decide(dir) {
-    if (busy || i >= items.length) return;
+    if (busy || i < 0 || i >= items.length) return;
     busy = true;
     stopHint();
     const it = items[i];
     track({ item_id: it.id, action: dir > 0 ? 'love' : 'pass', context, edit_id: editId, ms: performance.now() - shownAt });
     if (dir > 0) it._loved = true;
-    const card = cur;
-    const fly = () => {
-      card.style.transition = 'transform .23s ease-out';
-      card.style.transform = `translateX(${dir * 560}px) rotate(${dir * 18}deg)`;
-      setTimeout(() => { i++; busy = false; render(); }, 230);
-    };
-    if (dir > 0) { card.classList.add('flash'); setTimeout(fly, 190); } else fly();
+    const page = cur;
+    ground(dir * 100);
+    page.style.transition = 'transform .26s ease-in, opacity .26s ease-in';
+    page.style.transform = `translateX(${dir * 120}%) rotate(${dir * 6}deg)`;
+    page.style.opacity = dir < 0 ? '0.2' : '1';
+    setTimeout(() => { i++; busy = false; ground(0); render(); }, dir > 0 ? 300 : 260);
   }
 
   render();
@@ -171,25 +247,21 @@ function Deck(root, items, { withInfo = false, hint = false, context, editId, on
 
 function screenIntro() {
   saveStep('intro');
-  const el = show(`
-    <div class="fan" aria-hidden="true">
-      <img id="f1" style="left:calc(50% - 155px);top:30px;width:116px;height:158px;transform:rotate(-8deg)">
-      <img id="f2" style="left:calc(50% + 39px);top:30px;width:116px;height:158px;transform:rotate(8deg)">
-      <img id="f3" style="left:calc(50% - 69px);top:8px;width:138px;height:190px;box-shadow:0 20px 44px rgba(42,36,32,.22)">
-    </div>
-    <h1>Let’s build your Anna.</h1>
-    <p class="lede" style="font-size:15px">Anna isn’t an app. She’s your own taste agent — she learns what you love, and one day you’ll take her into any app to help you edit.</p>
-    <ol class="steps">
-      <li><span class="num">1</span><span>Swipe through a few things so your Anna gets a feel for your eye.</span></li>
-      <li><span class="num">2</span><span>Teach her from anywhere. <b>The more you add, and the wider the mix, the better your Anna knows you.</b></span></li>
-      <li><span class="num">3</span><span>For now, your Anna puts together a personal daily edit for you — not just things you’ll love, but what’s new, what’s trending and the wider look.</span></li>
-      <li><span class="num">4</span><span>She keeps learning from every swipe — she’s yours, and she goes where you go.</span></li>
-    </ol>
-    <div class="grow"></div>
-    <button class="btn" id="go">Start building my Anna</button>`);
-  // Borrow three pieces from the calibration set for the fan (loaded in the background).
+  screenToken++;
+  $app.innerHTML = `<section class="intro">
+    <img class="ph" id="ph" alt="" referrerpolicy="no-referrer">
+    <div class="mast" aria-label="Anna">An<br>na</div>
+    <img class="cut" id="cut" alt="" hidden>
+    <div class="foot">
+      <div class="line">The most tasteful friend you’ll ever have. Twelve things she found, every night. Swipe.</div>
+      <button class="btn light" id="go">Begin</button>
+    </div></section>`;
+  const el = $app.firstElementChild;
   calibrationItems().then((items) => {
-    ['f1', 'f2', 'f3'].forEach((id, n) => { const im = el.querySelector('#' + id); if (im && items[n]) { im.referrerPolicy = 'no-referrer'; im.src = items[n].image_url; } });
+    const it = items.find((x) => x.layout?.cutout) || items[0];
+    if (!it) return;
+    el.querySelector('#ph').src = it.image_url;
+    if (it.layout?.cutout) { const c = el.querySelector('#cut'); c.src = it.layout.cutout; c.hidden = false; }
   }).catch(() => {});
   el.querySelector('#go').onclick = async () => { api('user', { method: 'POST', body: { stage: 'onboarding' } }).catch(() => {}); screenCalibrate(); };
 }
@@ -221,11 +293,11 @@ async function fillWishlist(el, n = 6) {
 function screenAddAnywhere() {
   saveStep('addanywhere');
   const el = show(`
-    <h1>How to add to your Anna from anywhere</h1>
-    <p class="lede">See something you love in any app? Double-tap the back of your phone and your Anna has it.</p>
+    <h1>Show her things from anywhere.</h1>
+    <p class="lede">See something you love in any app? Double-tap the back of your phone. Anna’s seen it.</p>
     <div class="phone-stage demoA">
       <div class="phone">
-        ${phoneFront('<div class="toast"><span class="a">A</span><span style="flex:1">4 pieces sent to your Anna</span></div>')}
+        ${phoneFront('<div class="toast"><span class="a">A</span><span style="flex:1">Anna’s seen it</span></div>')}
         <div class="face back">
           <div class="bump"><i style="left:11px;top:11px"></i><i style="left:11px;top:47px"></i></div>
           <div class="spot"></div><div class="ripple"></div><div class="tapdot"></div>
@@ -234,7 +306,6 @@ function screenAddAnywhere() {
     </div>`);
   fillWishlist(el);
   const token = screenToken;
-  // Plays once, then moves on by itself.
   setTimeout(() => { if (token === screenToken) screenSetup(); }, 10500);
 }
 
@@ -242,14 +313,14 @@ function screenSetup() {
   saveStep('setup');
   const shortcut = STATE?.shortcut_url;
   const el = show(`
-    <h1>How to set that up</h1>
-    <ol class="steps" style="margin-top:16px;gap:20px">
+    <h1>Set that up once.</h1>
+    <ol class="steps" style="margin-top:8px">
       <li><span class="num">1</span><span><b>Add the Anna shortcut</b><span class="sub">Tap the button below, then Add Shortcut. When it asks for your code, enter <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b></span></span></li>
       <li><span class="num">2</span><span><b>Turn on the double-tap</b><span class="sub">Settings › Accessibility › Touch › Back Tap › Double Tap › Anna</span></span></li>
-      <li><span class="num">3</span><span><b>Test it</b><span class="sub">Come back here and double-tap the back of your phone. First time, tap Always Allow.</span></span></li>
+      <li><span class="num">3</span><span><b>Try it</b><span class="sub">Come back here and double-tap the back of your phone. First time, tap Always Allow.</span></span></li>
     </ol>
     <div class="grow"></div>
-    ${shortcut ? `<a class="btn" href="${esc(shortcut)}" target="_blank" rel="noopener">Add the shortcut</a>` : '<button class="btn" disabled>Shortcut link coming soon</button>'}
+    ${shortcut ? `<a class="btn full solid" href="${esc(shortcut)}" target="_blank" rel="noopener">Add the shortcut</a>` : '<button class="btn full" disabled>Shortcut link coming soon</button>'}
     <div class="waiting" id="wait"><span class="dot"></span><span id="waittext">Waiting for your first double-tap…</span></div>
     <button class="btn link" id="skip">Skip for now</button>`);
   el.querySelector('#skip').onclick = () => screenWishlists();
@@ -261,7 +332,7 @@ function screenSetup() {
       try {
         STATE = await api('me');
         if (STATE.user.shortcut_ok) {
-          const w = el.querySelector('#wait'); w.classList.add('ok'); el.querySelector('#waittext').textContent = 'Got it — your double-tap works';
+          const w = el.querySelector('#wait'); w.classList.add('ok'); el.querySelector('#waittext').textContent = 'Anna’s seen it';
           await sleep(1400);
           if (token === screenToken) screenWishlists();
           return;
@@ -275,16 +346,16 @@ function screenWishlists() {
   saveStep('wishlists');
   const ok = STATE?.user?.shortcut_ok;
   const el = show(`
-    ${ok ? `<div class="okline"><span class="tick">${ICON.tick}</span>Double-tap is working</div>` : ''}
-    <h1>Now use it to add your wishlists</h1>
-    <p class="lede">Open a wishlist in any app and double-tap. Scroll, tap again. The more you add, the better your Anna knows you.</p>
+    ${ok ? `<div class="okline">Double-tap is working</div>` : ''}
+    <h1>Now show her your wishlists.</h1>
+    <p class="lede">Open a wishlist in any app and double-tap. Scroll, tap again.</p>
     <div class="phone-stage demoB" style="min-height:440px">
       <div class="phone" style="height:420px">
-        ${phoneFront('<div class="whiteflash f2"></div><div class="toast t1"><span class="a">A</span><span style="flex:1">4 pieces sent to your Anna</span></div><div class="toast t2"><span class="a">A</span><span style="flex:1">4 more sent to your Anna</span></div>')}
+        ${phoneFront('<div class="whiteflash f2"></div><div class="toast t1"><span class="a">A</span><span style="flex:1">Anna’s seen it</span></div><div class="toast t2"><span class="a">A</span><span style="flex:1">Anna’s seen it</span></div>')}
       </div>
     </div>
-    <button class="btn" id="done">I’ve added my wishlists</button>
-    <button class="btn link" id="photos">${ICON.plus} Add screenshots from Photos instead</button>
+    <button class="btn full solid" id="done">Done</button>
+    <button class="btn link" id="photos">Add screenshots from Photos instead</button>
     <p class="small" id="upmsg" style="text-align:center;margin:0"></p>`);
   fillWishlist(el, 8);
   el.querySelector('#done').onclick = () => screenMostYou();
@@ -318,7 +389,7 @@ function pickPhotos(msgEl) {
     try {
       const r = await fetch(`/capture?${authQS()}`, { method: 'POST', body: form });
       if (!r.ok) throw new Error();
-      if (msgEl) msgEl.textContent = `${files.length} sent to your Anna ✓`;
+      if (msgEl) msgEl.textContent = 'Anna’s seen them';
     } catch { if (msgEl) msgEl.textContent = 'That didn’t go through — try again.'; }
   };
   $photo.click();
@@ -332,11 +403,10 @@ async function screenMostYou() {
   items = items.slice(0, 9);
   const picked = [];
   const el = show(`
-    <h1 style="font-size:34px">Last thing: pick the three that are the most you</h1>
-    <p class="lede" style="font-size:15px">These become your Anna’s starting point.</p>
-    <div class="grid3" id="g"></div>
+    <h1>Pick the three that are most you.</h1>
+    <div class="grid3" id="g" style="margin-top:8px"></div>
     <div class="grow"></div>
-    <button class="btn" id="done" disabled>Done</button>`);
+    <button class="btn full solid" id="done" disabled>Done</button>`);
   const g = el.querySelector('#g');
   const draw = () => {
     g.innerHTML = items.map((it) => {
@@ -365,11 +435,11 @@ function screenDropTime() {
   saveStep('droptime');
   const current = STATE?.user?.drop_time || '20:30';
   const el = show(`
-    <h1>What time should your Anna edit arrive?</h1>
-    <p class="lede">Every night. Change it any time.</p>
-    <div class="timebox"><label class="sr" for="t">Edit time</label><input id="t" type="time" value="${esc(current)}" step="900"></div>
+    <h1>When should tonight’s arrive?</h1>
+    <p class="lede">Every night, at the same time. Change it whenever you like.</p>
+    <div class="timebox"><label class="sr" for="t">Time</label><input id="t" type="time" value="${esc(current)}" step="900"></div>
     <div class="grow"></div>
-    <button class="btn" id="set">Set it</button>`);
+    <button class="btn full solid" id="set">Set it</button>`);
   const input = el.querySelector('#t');
   const label = () => { const [h, m] = input.value.split(':').map(Number); const h12 = ((h + 11) % 12) + 1; el.querySelector('#set').textContent = `Set ${h12}${m ? '.' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
   input.oninput = label; label();
@@ -382,16 +452,15 @@ function screenDropTime() {
 function screenHomeScreen() {
   saveStep('homescreen');
   show(`
-    <div class="bigicon" aria-hidden="true">A</div>
-    <h1 style="margin-top:14px">Put your Anna on your phone</h1>
-    <p class="lede">For now she lives here, and brings you your edit each night. One day she’ll come with you into any app.</p>
-    <div style="display:flex;flex-direction:column;gap:18px;margin-top:18px">
+    <h1>Put her on your phone.</h1>
+    <p class="lede">For now she lives here and brings you her issue each night.</p>
+    <div style="display:flex;flex-direction:column;gap:18px;margin-top:10px">
       <div class="iconrow"><span class="ic dots">•••</span>Tap ••• at the bottom right, then Share</div>
       <div class="iconrow"><span class="ic">${ICON.addsq}</span>Choose Add to Home Screen (under View More)</div>
       <div class="iconrow"><span class="ic">A</span>Open Anna from the new icon</div>
     </div>
     <div class="grow"></div>
-    <div class="arrowdown right" aria-hidden="true"><svg width="28" height="40" viewBox="0 0 28 40" fill="none" stroke="#2A2420" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v34M5 27l9 9 9-9"/></svg></div>`);
+    <div class="arrowdown right" aria-hidden="true"><svg width="28" height="40" viewBox="0 0 28 40" fill="none" stroke="#1A1815" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v34M5 27l9 9 9-9"/></svg></div>`);
 }
 
 function urlB64ToUint8Array(b64) {
@@ -405,12 +474,11 @@ function screenNotify() {
   const when = STATE?.user?.drop_pretty || '8.30pm';
   const el = show(`
     <div class="grow"></div>
-    ${ICON.bell}
-    <h1 style="font-size:40px">Your Anna brings you her first edit tonight at ${esc(when)}.</h1>
+    <h1>Tonight at ${esc(when)}.</h1>
     <p class="lede">One a night. Nothing else.</p>
     <p class="error" id="err" style="margin:0"></p>
-    <div style="height:30px"></div>
-    <button class="btn" id="on">Turn on notifications</button>
+    <div style="height:20px"></div>
+    <button class="btn full solid" id="on">Turn on notifications</button>
     <button class="btn link" id="later">Not now</button>`);
   const finish = async () => {
     try { STATE = await api('user', { method: 'POST', body: { stage: 'ready' } }); } catch {}
@@ -440,13 +508,12 @@ async function screenHome() {
   if (res.status === 'ready') return screenEdit(res.edit);
   const el = show(`
     <div class="grow"></div>
-    <div class="bigicon" aria-hidden="true">A</div>
-    <h1 style="margin-top:12px">Your Anna is putting together tonight’s edit.</h1>
-    <p class="lede">It arrives at ${esc(res.drop_pretty)}. Until then, double-tap anything you love in any app and she’ll learn from it.</p>
+    <div class="mast" aria-label="Anna">An<br>na</div>
+    <p class="lede" style="margin-top:8px">Tonight’s arrives at ${esc(res.drop_pretty)}.</p>
     <div class="grow"></div>
-    <button class="btn outline" id="kept">Everything you’ve kept</button>
-    <button class="btn link" id="photos">${ICON.plus} Add screenshots from Photos</button>
-    <p class="small" id="upmsg" style="text-align:center;margin:0"></p>`, 'center');
+    <button class="textlink" id="kept">Everything you’ve kept</button>
+    <button class="btn link" id="photos">Add screenshots from Photos</button>
+    <p class="small" id="upmsg" style="margin:0"></p>`, 'wait');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#photos').onclick = () => pickPhotos(el.querySelector('#upmsg'));
 }
@@ -461,30 +528,36 @@ function screenEdit(edit) {
   $app.innerHTML = '<section class="deck" id="deck"></section>';
   const earlier = edit.items.filter((i) => keptIds.has(i.id)).map((i) => ({ ...i, _loved: true }));
   const items = edit.items.filter((i) => !decided.has(i.id));
+  const fresh = decided.size === 0; // the cover opens the issue only the first time she opens it
   let deck;
   const openDetail = (it) => {
     track({ item_id: it.id, action: 'open', context: 'edit', edit_id: edit.id });
     const d = document.createElement('div');
     d.className = 'detail';
+    const wide = templateOf(it) === 'landscape';
     d.innerHTML = `
-      <img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">
-      <button class="close" aria-label="Close">${ICON.close}</button>
-      <div class="meta">
-        <span class="brand">${esc(it.brand || '')}</span>
-        <span class="pname">${esc(it.name || '')}</span>
-        <span class="small">${esc([money(it.price, it.currency), it.source].filter(Boolean).join(' · '))}</span>
-      </div>
-      <div class="actions">
-        ${it.url ? `<a class="btn" href="${esc(it.url)}" target="_blank" rel="noopener" id="shop">Take me there ${ICON.out}</a>` : ''}
-        <button class="iconbtn" aria-label="Keep" id="keep">${ICON.heart}</button>
+      <img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer" class="${wide ? 'contain' : ''}">
+      <div class="body">
+        <div class="meta">
+          <div class="brand">${esc(brandName(it.brand || it.source))}</div>
+          <div class="name">${esc(it.name || '')}</div>
+          <div class="pr">${priceLine(it).map((p) => `<span>${esc(p)}</span>`).join('')}</div>
+        </div>
+        <div class="acts">
+          ${it.url ? `<a class="go" href="${esc(it.url)}" target="_blank" rel="noopener" id="shop">Take me there &rarr;</a>` : '<span></span>'}
+          <div class="right">
+            <button class="ring ${it._loved ? 'on' : ''}" aria-label="Keep" id="keep"><i></i></button>
+            <button class="xbtn" aria-label="Close" id="close">&times;</button>
+          </div>
+        </div>
       </div>`;
     $app.appendChild(d);
-    d.querySelector('.close').onclick = () => d.remove();
+    d.querySelector('#close').onclick = () => d.remove();
     d.querySelector('#shop')?.addEventListener('click', () => { track({ item_id: it.id, action: 'shop', context: 'detail', edit_id: edit.id }); flush(); });
     d.querySelector('#keep').onclick = () => { d.remove(); deck.decide(1); };
   };
   deck = Deck(document.getElementById('deck'), items, {
-    withInfo: true, context: 'edit', editId: edit.id, onTap: openDetail,
+    cover: fresh ? edit : null, hint: true, context: 'edit', editId: edit.id, onTap: openDetail,
     onDone: () => { flush(); api('edit/finished', { method: 'POST', body: {} }).catch(() => {}); screenEnd([...earlier, ...items.filter((i) => i._loved)]); },
   });
 }
@@ -492,12 +565,11 @@ function screenEdit(edit) {
 function screenEnd(kept) {
   const when = STATE?.user?.drop_pretty || '8.30pm';
   const el = show(`
-    <h1 style="font-style:italic;font-size:46px;margin-top:30px">That’s tonight.</h1>
-    <p class="lede">You kept ${kept.length}. Your Anna learned from every swipe.</p>
-    <div class="endgrid" style="margin-top:16px">${kept.map((it) => `<img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">`).join('')}</div>
+    <h1 style="margin-top:40px">That’s tonight.</h1>
+    <div class="keptrow">${kept.map((it) => `<img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">`).join('')}</div>
+    <p class="endline">Tomorrow at ${esc(when)}.</p>
     <div class="grow"></div>
-    <p class="small" style="text-align:center;margin:0">Your next edit arrives tomorrow at ${esc(when)}</p>
-    <button class="btn outline" id="kept">Everything you’ve kept</button>`);
+    <button class="textlink" id="kept">Everything you’ve kept</button>`, 'end');
   el.querySelector('#kept').onclick = screenKept;
 }
 
@@ -505,17 +577,16 @@ async function screenKept() {
   let items = [];
   try { items = (await api('kept')).items; } catch {}
   const el = show(`
-    <button class="btn link" id="back" style="width:auto;align-self:flex-start;padding:0">‹ Back</button>
-    <h1>Everything you’ve kept</h1>
-    ${items.length ? '' : '<p class="lede">Nothing yet — swipe right on anything you love in tonight’s edit.</p>'}
-    <div class="endgrid">${items.map((it) => `<a href="${esc(it.url || '#')}" target="_blank" rel="noopener"><img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer"></a>`).join('')}</div>`);
+    <button class="btn link" id="back" style="align-self:flex-start">‹ Back</button>
+    <h1>Everything you’ve kept.</h1>
+    ${items.length ? '' : '<p class="lede">Nothing yet. Swipe right on anything you love tonight.</p>'}
+    <div class="keptrow" style="margin-top:8px">${items.map((it) => `<a href="${esc(it.url || '#')}" target="_blank" rel="noopener"><img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer"></a>`).join('')}</div>`);
   el.querySelector('#back').onclick = screenHome;
 }
 
 function screenNoLink() {
-  show(`<div class="grow"></div><div class="bigicon" aria-hidden="true">A</div>
-    <h1 style="margin-top:12px">This is Anna.</h1>
-    <p class="lede">Open Anna from the personal link Daniela sent you — it’s how your Anna knows it’s you.</p><div class="grow"></div>`, 'center');
+  show(`<div class="grow"></div><div class="mast" aria-label="Anna">An<br>na</div>
+    <p class="lede" style="margin-top:8px">Open Anna from the personal link Daniela sent you. It’s how your Anna knows it’s you.</p><div class="grow"></div>`, 'wait');
 }
 
 function screenError(e) {
@@ -535,7 +606,7 @@ async function start() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   if (qs.get('restart') === '1') {
     // Re-testing: wipe where she was up to and start again from the intro.
-    try { Object.keys(localStorage).filter((k) => k.startsWith('anna-step-')).forEach((k) => localStorage.removeItem(k)); } catch {}
+    try { Object.keys(localStorage).filter((k) => k.startsWith('anna-step-') || k === 'anna-hint').forEach((k) => localStorage.removeItem(k)); } catch {}
     try { await api('restart', { method: 'POST', body: {} }); } catch (e) { return screenError(e); }
     qs.delete('restart');
     history.replaceState(null, '', `${location.pathname}?${qs}`);
