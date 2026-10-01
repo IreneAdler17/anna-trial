@@ -41,10 +41,9 @@ h1,.h1{margin:0;font-family:var(--display);font-weight:400;font-size:40px;line-h
 
 /* ---------- pages (the cover and each piece) ---------- */
 .deck{position:absolute;inset:0;background:var(--page);overflow:hidden}
-.deck.warm{background:var(--red)}
-.deck.cool{background:var(--page)}
 .page{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab;will-change:transform,opacity;user-select:none;transform-origin:center bottom}
-.page.under{visibility:hidden}
+.page.under{pointer-events:none}
+.page::after{content:'';position:absolute;inset:0;background:var(--red);opacity:var(--warm,0);pointer-events:none;mix-blend-mode:multiply}
 .page img{pointer-events:none}
 .ph{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
 .cut{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
@@ -77,8 +76,10 @@ h1,.h1{margin:0;font-family:var(--display);font-weight:400;font-size:40px;line-h
 
 /* tail: the photo, then a cream band with the credit (no duplicated image) */
 .page.tail{background:var(--page2);color:var(--ink)}
-.page.tail .ph{height:74%}
-.page.tail .meta{position:absolute;left:24px;right:24px;top:calc(74% + 26px);display:flex;flex-direction:column;gap:8px}
+.page.tail .ph{height:calc(100% - var(--safe-bottom) - 118px)}
+.page.tail .meta{position:absolute;left:24px;right:24px;bottom:calc(var(--safe-bottom) + 20px);display:flex;flex-direction:column;gap:5px}
+.page.tail .meta .brand{font-size:24px}
+.page.tail .meta .name{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* the stacked credit used by Landscape, Tail and the closer look */
 .meta .brand{font-family:var(--display);font-size:30px;line-height:1.02;letter-spacing:-.01em;color:var(--red);overflow-wrap:anywhere}
@@ -86,23 +87,23 @@ h1,.h1{margin:0;font-family:var(--display);font-weight:400;font-size:40px;line-h
 .meta .pr{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;line-height:1.2;margin-top:2px;color:var(--muted)}
 
 /* first-card hint: nudges right (warm), then left (fades) — once, ever */
-.deck.hinting{animation:groundHint 5.2s ease-in-out infinite}
+.page.hint::after{animation:warmHint 5.2s ease-in-out infinite}
 .page.hint{animation:pageHint 5.2s ease-in-out infinite}
-@keyframes groundHint{0%,8%{background:var(--page)}18%,28%{background:var(--red)}38%,54%{background:var(--page)}62%,74%{background:var(--page)}84%,100%{background:var(--page)}}
+@keyframes warmHint{0%,8%{opacity:0}18%,28%{opacity:.3}38%,100%{opacity:0}}
 @keyframes pageHint{0%,8%{transform:translateX(0) rotate(0);opacity:1}18%,28%{transform:translateX(34px) rotate(2deg);opacity:1}38%,54%{transform:translateX(0) rotate(0);opacity:1}62%,74%{transform:translateX(-34px) rotate(-2deg);opacity:.55}84%,100%{transform:translateX(0) rotate(0);opacity:1}}
 
 /* ---------- closer look ---------- */
 .detail{position:absolute;inset:0;background:var(--page);color:var(--ink);z-index:20;display:flex;flex-direction:column;animation:fadeIn .25s ease-out}
-.detail img{width:100%;height:74%;flex-shrink:0;object-fit:cover;object-position:center top;display:block}
+.detail img{width:100%;height:66%;flex-shrink:0;object-fit:cover;object-position:center top;display:block}
 .detail img.contain{object-fit:contain;background:var(--page2)}
 .detail .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between;padding:20px 24px calc(var(--safe-bottom) + 24px)}
 .detail .meta{display:flex;flex-direction:column;gap:6px}
 .detail .meta .brand{font-family:var(--display);font-size:24px;line-height:1;color:var(--red)}
 .detail .meta .name{font-size:15px;line-height:1.35}
 .detail .meta .pr{display:flex;gap:14px;font-size:13px;line-height:1;color:var(--muted)}
-.detail .acts{display:flex;justify-content:space-between;align-items:center}
-.detail .go{font-size:12px;line-height:1;color:var(--quiet);text-decoration:none;letter-spacing:.02em}
-.detail .right{display:flex;gap:22px;align-items:center}
+.detail .acts{display:flex;justify-content:flex-end;align-items:center;gap:18px}
+.detail .brandlink{text-decoration:none;color:inherit;display:block}
+.detail .go{display:inline-block;margin-top:14px;font-size:14px;line-height:1;color:var(--red);text-decoration:none;border-bottom:1px solid var(--red);padding-bottom:3px}
 .ring{width:44px;height:44px;padding:0;border:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ring i{display:block;width:18px;height:18px;border:1.5px solid var(--ink);border-radius:50%}
 .ring.on i{background:var(--red);border-color:var(--red)}
@@ -192,3 +193,30 @@ h1,.h1{margin:0;font-family:var(--display);font-weight:400;font-size:40px;line-h
 .arrowdown{display:flex;justify-content:center;animation:bob 1.6s ease-in-out infinite}
 .arrowdown.right{justify-content:flex-end;padding-right:22px}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+
+/* ---------- first run ---------- */
+.intro .flash{position:absolute;inset:0}
+.intro .flash img{animation:flashIn .18s ease-out}
+@keyframes flashIn{from{opacity:.2;transform:scale(1.04)}to{opacity:1;transform:none}}
+.intro .foot{left:24px;right:24px;align-items:center;text-align:center;opacity:0;transform:translateY(8px);transition:opacity .5s ease-out,transform .5s ease-out;pointer-events:none}
+.intro.ready .foot{opacity:1;transform:none;pointer-events:auto}
+.intro .line{margin:0 auto}
+.intro .btn{align-self:center;min-width:160px}
+.btn.red{background:var(--red);border-color:var(--red);color:var(--cream)}
+.btn.center{align-self:center;min-width:140px;margin-top:22px}
+.stepmark{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--red)}
+.steps.big{gap:16px;margin-top:10px}
+.steps.big li{font-size:18px;line-height:1.3;align-items:baseline}
+.hsteps{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:16px}
+.hsteps li{display:flex;gap:14px;align-items:flex-start;font-size:16px;line-height:1.45}
+.hsteps b{font-weight:500}
+.glyph{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin:0 2px;color:var(--ink)}
+.glyph.dots{min-width:34px;height:24px;border-radius:12px;background:rgba(26,24,21,.08);font-size:11px;letter-spacing:1px}
+.glyph.toggle{width:34px;height:20px;border-radius:10px;background:#34C759;position:relative}
+.glyph.toggle i{position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.glyph.appicon{width:24px;height:24px;border-radius:6px;background:var(--night);color:var(--red);font-family:var(--display);font-size:16px}
+.timebox{margin-top:40px}
+.intro .mast{top:calc(var(--safe-top) + 12vh);font-size:72vw;transition:top .5s ease-out}
+.intro .flash{transition:opacity .45s ease-out}
+.intro.ready .flash{opacity:0}
+.intro .foot{bottom:calc(var(--safe-bottom) + 64px)}

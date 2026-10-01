@@ -141,7 +141,7 @@ function coverHTML(edit, it) {
 
 // ---------- the deck: cover (optional) then pages to swipe ----------
 function Deck(root, items, { cover = null, hint = false, context, editId, onDone, onTap }) {
-  let i = 0, startX = null, dx = 0, moved = false, busy = false, shownAt = 0;
+  let i = 0, startX = null, dx = 0, moved = false, busy = false, shownAt = 0, t0 = 0, lastX = 0, lastT = 0, vel = 0;
   let hinting = hint && !seenHint();
   let cur = null;
   const width = root.clientWidth || 390;
@@ -189,19 +189,22 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
     cur.classList.remove('hint'); root.classList.remove('hinting');
   }
 
-  function ground(d) { root.classList.toggle('warm', d > 8); root.classList.toggle('cool', d < -8); }
+  // Love warms the page with vermilion as it moves right; pass fades it as it moves left.
+  function ground(d) { if (cur) cur.style.setProperty('--warm', String(Math.max(0, Math.min(0.32, d / 300)))); }
 
   function bind(page) {
     page.addEventListener('pointerdown', (e) => {
       if (busy) return;
       stopHint();
-      startX = e.clientX; dx = 0; moved = false;
+      startX = e.clientX; dx = 0; moved = false; t0 = performance.now(); lastX = e.clientX; lastT = t0; vel = 0;
       try { page.setPointerCapture(e.pointerId); } catch {}
       page.style.transition = 'none';
     });
     page.addEventListener('pointermove', (e) => {
       if (startX === null) return;
       dx = e.clientX - startX;
+      const now = performance.now();
+      if (now > lastT) { vel = (e.clientX - lastX) / (now - lastT); lastX = e.clientX; lastT = now; }
       if (Math.abs(dx) > 6) moved = true;
       page.style.transform = `translateX(${dx}px) rotate(${dx / 17}deg)`;
       if (!isCover()) { page.style.opacity = dx < 0 ? String(Math.max(0.35, 1 - (-dx / 220) * 0.6)) : '1'; ground(dx); }
@@ -211,8 +214,10 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
       startX = null;
       if (!moved) { page.style.transform = ''; page.style.opacity = ''; ground(0); if (isCover()) advance(); else onTap?.(items[i]); return; }
       if (isCover()) { if (Math.abs(dx) > 60) advance(dx < 0 ? -1 : 1); else { page.style.transition = 'transform .23s ease-out'; page.style.transform = ''; } return; }
-      if (dx > 90) decide(1);
-      else if (dx < -90) decide(-1);
+      // A short flick counts as much as a long drag.
+      const flick = Math.abs(vel) > 0.45 && Math.abs(dx) > 30;
+      if (dx > 60 || (flick && dx > 0)) decide(1);
+      else if (dx < -60 || (flick && dx < 0)) decide(-1);
       else { page.style.transition = 'transform .23s ease-out, opacity .23s ease-out'; page.style.transform = ''; page.style.opacity = ''; ground(0); }
     };
     page.addEventListener('pointerup', end);
@@ -222,9 +227,9 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
   function advance(dir = -1) {
     busy = true;
     const page = cur;
-    page.style.transition = 'transform .28s ease-in, opacity .28s ease-in';
+    page.style.transition = 'transform .18s ease-in, opacity .18s ease-in';
     page.style.transform = `translateX(${dir * 120}%) rotate(${dir * 4}deg)`;
-    setTimeout(() => { i++; busy = false; ground(0); render(); }, 280);
+    setTimeout(() => { i++; busy = false; render(); }, 180);
   }
 
   function decide(dir) {
@@ -236,10 +241,10 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
     if (dir > 0) it._loved = true;
     const page = cur;
     ground(dir * 100);
-    page.style.transition = 'transform .26s ease-in, opacity .26s ease-in';
-    page.style.transform = `translateX(${dir * 120}%) rotate(${dir * 6}deg)`;
-    page.style.opacity = dir < 0 ? '0.2' : '1';
-    setTimeout(() => { i++; busy = false; ground(0); render(); }, dir > 0 ? 300 : 260);
+    page.style.transition = 'transform .17s ease-in, opacity .17s ease-in';
+    page.style.transform = `translateX(${dir * 115}%) rotate(${dir * 6}deg)`;
+    page.style.opacity = dir < 0 ? '0' : '1';
+    setTimeout(() => { i++; busy = false; render(); }, 170);
   }
 
   render();
@@ -247,62 +252,82 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
 }
 
 // ================= ONBOARDING =================
+// The first run: Anna (with a flash of three pieces) → what you'll do → double-tap → wishlists →
+// forty swipes → pick three → time → Home Screen → notifications.
+
+const STEPS = ['Set up the double-tap', 'Show her your wishlists', 'Swipe forty things', 'Choose your time', 'Put her on your Home Screen'];
+const stepMark = (n) => `<div class="stepmark">${n} of ${STEPS.length}</div>`;
 
 function screenIntro() {
   saveStep('intro');
   screenToken++;
+  const token = screenToken;
   $app.innerHTML = `<section class="intro">
-    <img class="ph" id="ph" alt="" referrerpolicy="no-referrer">
+    <div class="flash" id="flash"></div>
     <div class="mast" aria-label="Anna">An<br>na</div>
-    <img class="cut" id="cut" alt="" hidden>
-    <div class="foot">
-      <div class="line">The most tasteful friend you’ll ever have. Twelve things she found, every night. Swipe.</div>
+    <div class="foot" id="foot">
+      <div class="line">The most tasteful friend you’ll ever have. Twelve things she found, every night.</div>
       <button class="btn light" id="go">Begin</button>
     </div></section>`;
   const el = $app.firstElementChild;
-  calibrationItems().then((items) => {
-    const it = items.find((x) => x.layout?.cutout) || items[0];
-    if (!it) return;
-    el.querySelector('#ph').src = it.image_url;
-    if (it.layout?.cutout) { const c = el.querySelector('#cut'); c.src = it.layout.cutout; c.hidden = false; }
-  }).catch(() => {});
-  el.querySelector('#go').onclick = async () => { api('user', { method: 'POST', body: { stage: 'onboarding' } }).catch(() => {}); screenCalibrate(); };
+  el.querySelector('#go').onclick = () => { api('user', { method: 'POST', body: { stage: 'onboarding' } }).catch(() => {}); screenRunThrough(); };
+  // The sizzle: Anna alone, then three pieces flash behind her, then the line and the button.
+  const reveal = () => { if (token === screenToken) el.classList.add('ready'); };
+  calibrationItems().then(async (items) => {
+    const picks = items.filter((x) => x.image_url).slice(0, 12);
+    const three = [picks[0], picks[4], picks[8]].filter(Boolean);
+    const loaded = await Promise.all(three.map((it) => new Promise((res) => {
+      const im = new Image(); im.referrerPolicy = 'no-referrer'; im.onload = () => res(im); im.onerror = () => res(null); im.src = it.image_url;
+      setTimeout(() => res(null), 2500);
+    })));
+    const ims = loaded.filter(Boolean);
+    if (token !== screenToken) return;
+    const box = el.querySelector('#flash');
+    await sleep(700);
+    for (const im of ims) {
+      if (token !== screenToken) return;
+      im.className = 'ph'; im.alt = '';
+      box.replaceChildren(im);
+      await sleep(520);
+    }
+    reveal();
+  }).catch(reveal);
+  setTimeout(reveal, 4500);
 }
 
 let _calib = null;
 function calibrationItems() { return (_calib ||= api('calibration').then((r) => r.items)); }
 
-async function screenCalibrate() {
-  saveStep('calibrate');
-  screenToken++;
-  $app.innerHTML = '<section class="deck" id="deck"></section>';
-  let items;
-  try { items = await calibrationItems(); } catch (e) { return screenError(e); }
-  Deck(document.getElementById('deck'), items, { hint: true, context: 'calibration', onDone: () => { flush(); screenMostYou(); } });
+function screenRunThrough() {
+  saveStep('runthrough');
+  const el = show(`
+    <h1>First, five things.</h1>
+    <p class="lede">About five minutes, once.</p>
+    <ol class="steps big">${STEPS.map((t, k) => `<li><span class="num">${k + 1}</span><span>${esc(t)}</span></li>`).join('')}</ol>
+    <div class="grow"></div>
+    <button class="btn full red" id="go">Start</button>`);
+  el.querySelector('#go').onclick = () => screenBackTap();
 }
 
-// Show her things from anywhere: the double-tap, set up once. Not part of the first run —
-// offered after her first night, from the end screen and the waiting screen.
-function screenCapture(back = screenHome) {
+function screenBackTap() {
+  saveStep('backtap');
   const shortcut = STATE?.shortcut_url;
   const ok = STATE?.user?.shortcut_ok;
   const el = show(`
-    <button class="btn link" id="back" style="align-self:flex-start">‹ Back</button>
-    <h1>Show her things from anywhere.</h1>
-    <p class="lede">Double-tap the back of your phone on anything you love, in any app: a wishlist, a shop, Instagram. Anna sees it.</p>
-    ${ok ? `<p class="okline" style="margin:8px 0 0">Your double-tap is working. Try it on a wishlist.</p>` : `
-    <ol class="steps" style="margin-top:8px">
-      <li><span class="num">1</span><span><b>Add the Anna shortcut</b><span class="sub">Tap the button below, then Add Shortcut. When it asks for your code, enter <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b></span></span></li>
-      <li><span class="num">2</span><span><b>Turn on the double-tap</b><span class="sub">Settings › Accessibility › Touch › Back Tap › Double Tap › Anna</span></span></li>
-      <li><span class="num">3</span><span><b>Try it</b><span class="sub">Come back here and double-tap the back of your phone. First time, tap Always Allow.</span></span></li>
+    ${stepMark(1)}
+    <h1>Set up the double-tap.</h1>
+    <p class="lede">Then a double-tap on the back of your phone shows Anna whatever’s on your screen, in any app.</p>
+    ${ok ? `<p class="okline" style="margin-top:8px">Your double-tap is already working.</p>` : `
+    <ol class="steps" style="margin-top:6px">
+      <li><span class="num">1</span><span><b>Add the Anna shortcut</b><span class="sub">Tap the red button, then Add Shortcut. When it asks for your code, type <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b></span></span></li>
+      <li><span class="num">2</span><span><b>Turn on the double-tap</b><span class="sub">Open Settings › Accessibility › Touch › Back Tap › Double Tap, and choose Anna</span></span></li>
+      <li><span class="num">3</span><span><b>Come back and try it</b><span class="sub">Double-tap the back of your phone on this screen. The first time, tap Always Allow.</span></span></li>
     </ol>`}
     <div class="grow"></div>
-    ${ok ? '' : (shortcut ? `<a class="btn full solid" href="${esc(shortcut)}" target="_blank" rel="noopener">Add the shortcut</a>` : '<button class="btn full" disabled>Shortcut link coming soon</button>')}
-    ${ok ? '' : '<div class="waiting" id="wait"><span class="dot"></span><span id="waittext">Waiting for your first double-tap…</span></div>'}
-    <button class="btn link" id="photos">Or add screenshots from Photos</button>
-    <p class="small" id="upmsg" style="margin:0"></p>`);
-  el.querySelector('#back').onclick = () => back();
-  el.querySelector('#photos').onclick = () => pickPhotos(el.querySelector('#upmsg'));
+    ${ok ? '' : `${shortcut ? `<a class="btn full red" href="${esc(shortcut)}" target="_blank" rel="noopener">Add the shortcut</a>` : '<button class="btn full" disabled>Shortcut link coming soon</button>'}
+    <div class="waiting" id="wait"><span class="dot"></span><span id="waittext">Waiting for your first double-tap…</span></div>`}
+    <button class="btn ${ok ? 'full red' : 'link'}" id="next">${ok ? 'Next' : 'Skip for now'}</button>`);
+  el.querySelector('#next').onclick = () => screenWishlists();
   if (ok) return;
   const token = screenToken;
   (async () => {
@@ -313,12 +338,74 @@ function screenCapture(back = screenHome) {
         STATE = await api('me');
         if (STATE.user.shortcut_ok) {
           el.querySelector('#wait').classList.add('ok');
-          el.querySelector('#waittext').textContent = 'Anna’s seen it. Now try it on a wishlist.';
+          el.querySelector('#waittext').textContent = 'It works. Anna’s seen it.';
+          const nx = el.querySelector('#next'); nx.className = 'btn full red'; nx.textContent = 'Next';
           return;
         }
       } catch {}
     }
   })();
+}
+
+function screenWishlists() {
+  saveStep('wishlists');
+  const el = show(`
+    ${stepMark(2)}
+    <h1>Show her your wishlists.</h1>
+    <ol class="steps" style="margin-top:6px">
+      <li><span class="num">1</span><span>Open a wishlist or saved items, in any shop’s app or site, or Instagram saves.</span></li>
+      <li><span class="num">2</span><span>Double-tap the back of your phone.</span></li>
+      <li><span class="num">3</span><span>Scroll down and double-tap again, until you’ve shown her the lot.</span></li>
+      <li><span class="num">4</span><span>Come back here.</span></li>
+    </ol>
+    <div class="grow"></div>
+    <button class="btn full red" id="done">I’ve done that</button>
+    <button class="btn link" id="photos">Or add screenshots from Photos</button>
+    <p class="small" id="upmsg" style="margin:0"></p>`);
+  el.querySelector('#done').onclick = () => screenSwipeIntro();
+  el.querySelector('#photos').onclick = () => pickPhotos(el.querySelector('#upmsg'));
+}
+
+function screenSwipeIntro() {
+  saveStep('swipeintro');
+  const el = show(`
+    ${stepMark(3)}
+    <h1>Swipe forty things.</h1>
+    <p class="lede">Right if you love it. Left if you don’t. Don’t think too hard.</p>
+    <div class="grow"></div>
+    <button class="btn full red" id="go">Go</button>`);
+  el.querySelector('#go').onclick = () => screenCalibrate();
+}
+
+async function screenCalibrate() {
+  saveStep('calibrate');
+  screenToken++;
+  $app.innerHTML = '<section class="deck" id="deck"></section>';
+  let items;
+  try { items = await calibrationItems(); } catch (e) { return screenError(e); }
+  Deck(document.getElementById('deck'), items, { hint: true, context: 'calibration', onDone: () => { flush(); screenMostYou(); } });
+}
+
+// The same double-tap setup, reachable later from the end of the night and the waiting screen.
+function screenCapture(back = screenHome) {
+  const shortcut = STATE?.shortcut_url;
+  const ok = STATE?.user?.shortcut_ok;
+  const el = show(`
+    <button class="btn link" id="back" style="align-self:flex-start">‹ Back</button>
+    <h1>Show her things from anywhere.</h1>
+    <p class="lede">Double-tap the back of your phone on anything you love, in any app. Anna sees it.</p>
+    ${ok ? `<p class="okline" style="margin:8px 0 0">Your double-tap is working.</p>` : `
+    <ol class="steps" style="margin-top:8px">
+      <li><span class="num">1</span><span><b>Add the Anna shortcut</b><span class="sub">Tap the red button, then Add Shortcut. When it asks for your code, type <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b></span></span></li>
+      <li><span class="num">2</span><span><b>Turn on the double-tap</b><span class="sub">Open Settings › Accessibility › Touch › Back Tap › Double Tap, and choose Anna</span></span></li>
+      <li><span class="num">3</span><span><b>Come back and try it</b><span class="sub">Double-tap the back of your phone. The first time, tap Always Allow.</span></span></li>
+    </ol>`}
+    <div class="grow"></div>
+    ${ok ? '' : (shortcut ? `<a class="btn full red" href="${esc(shortcut)}" target="_blank" rel="noopener">Add the shortcut</a>` : '')}
+    <button class="btn link" id="photos">Or add screenshots from Photos</button>
+    <p class="small" id="upmsg" style="margin:0"></p>`);
+  el.querySelector('#back').onclick = () => back();
+  el.querySelector('#photos').onclick = () => pickPhotos(el.querySelector('#upmsg'));
 }
 
 // Screenshots from Photos: shrink on the phone first so uploads are quick.
@@ -365,7 +452,7 @@ async function screenMostYou() {
     <h1>Pick the three that are most you.</h1>
     <div class="grid3" id="g" style="margin-top:8px"></div>
     <div class="grow"></div>
-    <button class="btn full solid" id="done" disabled>Done</button>`);
+    <button class="btn full red" id="done" disabled>Done</button>`);
   const g = el.querySelector('#g');
   const draw = () => {
     g.innerHTML = items.map((it) => {
@@ -390,42 +477,58 @@ async function screenMostYou() {
   };
 }
 
+const pretty = (t) => { const [h, m] = String(t).split(':').map(Number); return `${((h + 11) % 12) + 1}${m ? '.' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
+
 function screenDropTime() {
   saveStep('droptime');
   const current = STATE?.user?.drop_time || '20:30';
   const el = show(`
+    ${stepMark(4)}
     <h1>When should tonight’s arrive?</h1>
     <p class="lede">Every night, at the same time. Change it whenever you like.</p>
     <div class="timebox"><label class="sr" for="t">Time</label><input id="t" type="time" value="${esc(current)}" step="900"></div>
-    <div class="grow"></div>
-    <button class="btn full solid" id="set">Set it</button>`);
+    <button class="btn red center" id="set">Set</button>`);
   const input = el.querySelector('#t');
-  const label = () => { const [h, m] = input.value.split(':').map(Number); const h12 = ((h + 11) % 12) + 1; el.querySelector('#set').textContent = `Set ${h12}${m ? '.' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
-  input.oninput = label; label();
-  // Move on at once; the time saves in the background (a cold server can take a few seconds,
-  // and a first tap that only closes the time picker must not feel like a dead button).
+  // Move on at once; the time saves in the background.
   el.querySelector('#set').onclick = () => {
     const t = input.value || '20:30';
-    const [h, m] = t.split(':').map(Number);
-    STATE = { ...STATE, user: { ...(STATE?.user || {}), drop_time: t, stage: 'homescreen',
-      drop_pretty: `${((h + 11) % 12) + 1}${m ? '.' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}` } };
+    STATE = { ...STATE, user: { ...(STATE?.user || {}), drop_time: t, stage: 'homescreen', drop_pretty: pretty(t) } };
     api('user', { method: 'POST', body: { drop_time: t, stage: 'homescreen' } }).then((r) => { STATE = r; }).catch(() => {});
     isStandalone ? screenNotify() : screenHomeScreen();
   };
 }
 
+const SAFARI = {
+  dots: '<span class="glyph dots">•••</span>',
+  share: '<svg class="glyph" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>',
+  add: '<svg class="glyph" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>',
+  toggle: '<span class="glyph toggle"><i></i></span>',
+  icon: '<span class="glyph appicon">A</span>',
+};
+
 function screenHomeScreen() {
   saveStep('homescreen');
-  show(`
-    <h1>Put her on your phone.</h1>
-    <p class="lede">For now she lives here and brings you her issue each night.</p>
-    <div style="display:flex;flex-direction:column;gap:18px;margin-top:10px">
-      <div class="iconrow"><span class="ic dots">•••</span>Tap ••• at the bottom right, then Share</div>
-      <div class="iconrow"><span class="ic">${ICON.addsq}</span>Choose Add to Home Screen (under View More)</div>
-      <div class="iconrow"><span class="ic">A</span>Open Anna from the new icon</div>
-    </div>
+  // The Home Screen icon opens whatever address is showing when she adds it: make it just her link.
+  try { history.replaceState(null, '', `/?${authQS()}`); } catch {}
+  const el = show(`
+    ${stepMark(5)}
+    <h1>Put her on your Home Screen.</h1>
+    <p class="lede">So she can bring you tonight’s, and tell you it’s here.</p>
+    <ol class="hsteps">
+      <li><span class="num">1</span><span>Tap ${SAFARI.dots} at the bottom right of Safari.</span></li>
+      <li><span class="num">2</span><span>Tap ${SAFARI.share} <b>Share</b>.</span></li>
+      <li><span class="num">3</span><span>Tap <b>View More</b>, then ${SAFARI.add} <b>Add to Home Screen</b>.</span></li>
+      <li><span class="num">4</span><span>Make sure <b>Open as Web App</b> is on ${SAFARI.toggle}, then tap <b>Add</b>.</span></li>
+      <li><span class="num">5</span><span>Safari closes. Find ${SAFARI.icon} <b>Anna</b> on your Home Screen and tap her. You’ll pick up right here.</span></li>
+    </ol>
     <div class="grow"></div>
-    <div class="arrowdown right" aria-hidden="true"><svg width="28" height="40" viewBox="0 0 28 40" fill="none" stroke="#1A1815" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v34M5 27l9 9 9-9"/></svg></div>`);
+    <button class="btn link" id="later">I’ll do this later</button>
+    <div class="arrowdown right" aria-hidden="true"><svg width="28" height="40" viewBox="0 0 28 40" fill="none" stroke="#C8452B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v34M5 27l9 9 9-9"/></svg></div>`);
+  el.querySelector('#later').onclick = async () => {
+    try { STATE = await api('user', { method: 'POST', body: { stage: 'ready' } }); } catch {}
+    saveStep('done');
+    screenHome();
+  };
 }
 
 function urlB64ToUint8Array(b64) {
@@ -443,7 +546,7 @@ function screenNotify() {
     <p class="lede">One a night. Nothing else.</p>
     <p class="error" id="err" style="margin:0"></p>
     <div style="height:20px"></div>
-    <button class="btn full solid" id="on">Turn on notifications</button>
+    <button class="btn full red" id="on">Turn on notifications</button>
     <button class="btn link" id="later">Not now</button>`);
   const finish = async () => {
     try { STATE = await api('user', { method: 'POST', body: { stage: 'ready' } }); } catch {}
@@ -502,18 +605,18 @@ function screenEdit(edit) {
     d.innerHTML = `
       <img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer" class="${wide ? 'contain' : ''}">
       <div class="body">
-        ${metaHTML(it)}
+        <div>
+          ${it.url ? `<a class="brandlink" href="${esc(it.url)}" target="_blank" rel="noopener">${metaHTML(it)}</a>` : metaHTML(it)}
+          ${it.url ? `<a class="go" href="${esc(it.url)}" target="_blank" rel="noopener">Take me to ${esc(retailerName(it.source, it.brand) || 'the shop')} &rarr;</a>` : ''}
+        </div>
         <div class="acts">
-          ${it.url ? `<a class="go" href="${esc(it.url)}" target="_blank" rel="noopener" id="shop">Take me there &rarr;</a>` : '<span></span>'}
-          <div class="right">
-            <button class="ring ${it._loved ? 'on' : ''}" aria-label="Keep" id="keep"><i></i></button>
-            <button class="xbtn" aria-label="Close" id="close">&times;</button>
-          </div>
+          <button class="ring ${it._loved ? 'on' : ''}" aria-label="Keep" id="keep"><i></i></button>
+          <button class="xbtn" aria-label="Close" id="close">&times;</button>
         </div>
       </div>`;
     $app.appendChild(d);
     d.querySelector('#close').onclick = () => d.remove();
-    d.querySelector('#shop')?.addEventListener('click', () => { track({ item_id: it.id, action: 'shop', context: 'detail', edit_id: edit.id }); flush(); });
+    d.querySelectorAll('a[href]').forEach((a) => a.addEventListener('click', () => { track({ item_id: it.id, action: 'shop', context: 'detail', edit_id: edit.id }); flush(); }));
     d.querySelector('#keep').onclick = () => { d.remove(); deck.decide(1); };
   };
   deck = Deck(document.getElementById('deck'), items, {
@@ -560,8 +663,8 @@ function screenError(e) {
 
 // ================= START =================
 
-const RESUME = { intro: screenIntro, calibrate: screenCalibrate, addanywhere: screenMostYou, setup: screenMostYou,
-  wishlists: screenMostYou, mostyou: screenMostYou, droptime: screenDropTime, homescreen: screenHomeScreen, notify: screenNotify };
+const RESUME = { intro: screenIntro, runthrough: screenRunThrough, backtap: screenBackTap, wishlists: screenWishlists,
+  swipeintro: screenSwipeIntro, calibrate: screenCalibrate, addanywhere: screenBackTap, setup: screenBackTap, mostyou: screenMostYou, droptime: screenDropTime, homescreen: screenHomeScreen, notify: screenNotify };
 
 async function start() {
   if (!AUTH.u || !AUTH.k) return screenNoLink();
