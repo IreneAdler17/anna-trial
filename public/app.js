@@ -627,7 +627,7 @@ async function screenHome() {
     <p class="lede big" style="margin-top:8px">${esc(arrivesLine(STATE?.user?.drop_time))}</p>
     <div class="grow"></div>
     <button class="biglink red" id="show">Show your Anna more things you love.</button>
-    <button class="biglink ink" id="kept">Everything you’ve kept.</button>`, 'wait');
+    <button class="biglink red" id="kept">Here’s everything you liked.</button>`, 'wait');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(screenHome);
 }
@@ -680,11 +680,11 @@ function screenEdit(edit) {
 function screenEnd(kept) {
   const when = STATE?.user?.drop_pretty || '8.30pm';
   const el = show(`
-    <h1 style="margin-top:40px">That’s tonight.</h1>
+    <h1 style="margin-top:40px">That’s today.</h1>
     <div class="keptrow small">${kept.slice(0, 8).map((it) => `<img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">`).join('')}</div>
     <p class="endline">${esc(arrivesLine(STATE?.user?.drop_time, { done: true }))}</p>
     <button class="biglink red" id="show">Show your Anna more things you love.</button>
-    <button class="biglink ink" id="kept">Everything you’ve kept.</button>`, 'end');
+    <button class="biglink red" id="kept">Here’s everything you liked.</button>`, 'end');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(() => screenEnd(kept));
 }
@@ -694,8 +694,8 @@ async function screenKept() {
   try { items = (await api('kept')).items; } catch {}
   const el = show(`
     <button class="btn link" id="back" style="align-self:flex-start">‹ Back</button>
-    <h1>Everything you’ve kept.</h1>
-    ${items.length ? '' : '<p class="lede">Nothing yet. Swipe right on anything you love tonight.</p>'}
+    <h1>Here’s everything you liked.</h1>
+    ${items.length ? '' : '<p class="lede">Nothing yet. Swipe right on anything you love today.</p>'}
     <div class="keptrow" style="margin-top:8px">${items.map((it) => `<a href="${esc(it.url || '#')}" target="_blank" rel="noopener"><img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer"></a>`).join('')}</div>`);
   el.querySelector('#back').onclick = screenHome;
 }

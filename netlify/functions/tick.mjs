@@ -23,7 +23,7 @@ export default async () => {
     const edit = await store.getEdit(u.id, date);
     if (!edit && minutes >= Math.max(0, drop - BUILD_AHEAD_MINUTES)) toBuild.push(u.id);
     if (edit && !edit.notified_at && minutes >= drop) {
-      const r = await pushToUser(u.id, { title: 'Anna', body: 'Your Anna has tonight’s edit.', url: '/?open=edit' });
+      const r = await pushToUser(u.id, { title: 'Anna', body: 'Today’s Anna edition is here.', url: '/?open=edit' });
       await store.updateEdit(edit.id, { notified_at: new Date().toISOString() });
       console.log('[tick] notified', u.id, r);
     }

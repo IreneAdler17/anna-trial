@@ -6,7 +6,7 @@ self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data?.text() }; }
   event.waitUntil(self.registration.showNotification(data.title || 'Anna', {
-    body: data.body || 'Your Anna has tonight’s edit.',
+    body: data.body || 'Today’s Anna edition is here.',
     icon: '/img/icon-192.png',
     badge: '/img/icon-192.png',
     tag: 'anna-edit',
