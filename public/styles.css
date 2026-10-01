@@ -233,3 +233,6 @@ img.fit{object-fit:contain!important;object-position:center center!important}
 .keptrow.small img{width:calc((100% - 24px) / 4)}
 .tile .n{background:transparent;color:var(--red);width:30px;height:30px;border-radius:50%;background:var(--cream)}
 .tile.on{box-shadow:inset 0 0 0 3px var(--red)}
+.biglink.red{color:var(--red)}
+.biglink.ink{color:var(--ink)}
+.biglink+.biglink{margin-top:14px}

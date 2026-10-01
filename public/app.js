@@ -514,6 +514,15 @@ async function screenMostYou() {
   };
 }
 
+// "Today's Anna edition arrives at 8.30pm." — or tomorrow's, once today's time has passed (or today's is done).
+function arrivesLine(dropTime, { done = false } = {}) {
+  const t = dropTime || STATE?.user?.drop_time || '20:30';
+  const [h, m] = t.split(':').map(Number);
+  const now = new Date();
+  const passed = now.getHours() * 60 + now.getMinutes() >= h * 60 + (m || 0);
+  return `${done || passed ? 'Tomorrow’s' : 'Today’s'} Anna edition arrives at ${pretty(t)}.`;
+}
+
 const pretty = (t) => { const [h, m] = String(t).split(':').map(Number); return `${((h + 11) % 12) + 1}${m ? '.' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
 
 function screenDropTime() {
@@ -556,7 +565,8 @@ function screenHomeScreen() {
       <li><span class="num">2</span><span>Tap ${SAFARI.share} <b>Share</b>.</span></li>
       <li><span class="num">3</span><span>Tap <b>View More</b>, then ${SAFARI.add} <b>Add to Home Screen</b>.</span></li>
       <li><span class="num">4</span><span>Make sure <b>Open as Web App</b> is on ${SAFARI.toggle}, then tap <b>Add</b>.</span></li>
-      <li><span class="num">5</span><span>Safari closes. Find ${SAFARI.icon} <b>Anna</b> on your Home Screen and tap it. You’ll pick up right here.</span></li>
+      <li><span class="num">5</span><span>Safari closes. Find ${SAFARI.icon} <b>Anna</b> on your Home Screen and tap it.</span></li>
+      <li><span class="num">6</span><span>Tap <b>Turn on notifications</b>, then <b>Allow</b>, so your Anna can tell you when your edition is here.</span></li>
     </ol>
     <div class="grow"></div>
     <button class="btn link" id="later">I’ll do this later</button>
@@ -579,8 +589,8 @@ function screenNotify() {
   const when = STATE?.user?.drop_pretty || '8.30pm';
   const el = show(`
     <div class="grow"></div>
-    <h1>Tonight at ${esc(when)}.</h1>
-    <p class="lede">One a night. Nothing else.</p>
+    <h1>${esc(arrivesLine())}</h1>
+    <p class="lede big">Turn on notifications and your Anna will tell you when it’s here. Once a day, nothing else.</p>
     <p class="error" id="err" style="margin:0"></p>
     <div style="height:20px"></div>
     <button class="btn full red" id="on">Turn on notifications</button>
@@ -614,10 +624,10 @@ async function screenHome() {
   const el = show(`
     <div class="grow"></div>
     <div class="mast" aria-label="Anna">An<br>na</div>
-    <p class="lede" style="margin-top:8px">Tonight’s arrives at ${esc(res.drop_pretty)}.</p>
+    <p class="lede big" style="margin-top:8px">${esc(arrivesLine(STATE?.user?.drop_time))}</p>
     <div class="grow"></div>
-    <button class="textlink" id="kept">Everything you’ve kept</button>
-    <button class="biglink" id="show">Show your Anna more things you love.</button>`, 'wait');
+    <button class="biglink red" id="show">Show your Anna more things you love.</button>
+    <button class="biglink ink" id="kept">Everything you’ve kept.</button>`, 'wait');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(screenHome);
 }
@@ -672,9 +682,9 @@ function screenEnd(kept) {
   const el = show(`
     <h1 style="margin-top:40px">That’s tonight.</h1>
     <div class="keptrow small">${kept.slice(0, 8).map((it) => `<img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">`).join('')}</div>
-    <p class="endline">Tomorrow at ${esc(when)}.</p>
-    <button class="textlink" id="kept" style="margin-top:8px">Everything you’ve kept</button>
-    <button class="biglink" id="show">Show your Anna more things you love.</button>`, 'end');
+    <p class="endline">${esc(arrivesLine(STATE?.user?.drop_time, { done: true }))}</p>
+    <button class="biglink red" id="show">Show your Anna more things you love.</button>
+    <button class="biglink ink" id="kept">Everything you’ve kept.</button>`, 'end');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(() => screenEnd(kept));
 }
