@@ -103,10 +103,15 @@ async function admin(req, url) {
     return json(c ? { created_at: c.created_at, curated: c.curated, stale: c.stale,
       items: c.items.map((i) => `${i.attrs?.category || '?'} · ${i.brand || ''} · ${i.name || ''}`) } : { none: true });
   }
-  if (action === 'reset') {
+  if (action === 'reset' || action === 'open') {
     const user = await store.getUser(url.searchParams.get('u'));
     if (!user) return json({ error: 'no such user' }, 404);
-    await store.resetUser(user.id);
+    if (action === 'reset') await store.resetUser(user.id);
+    // ?go=1 (or action=open): straight into the app on whichever site this was opened on — the
+    // preview stays the preview. One bookmark on the phone replaces copying links about.
+    if (action === 'open' || url.searchParams.get('go') === '1') {
+      return new Response(null, { status: 302, headers: { location: `/?u=${user.id}&k=${user.key}`, 'cache-control': 'no-store' } });
+    }
     return json({ ok: true, link: `${siteUrl(req)}/?u=${user.id}&k=${user.key}` });
   }
   if (action === 'push') {
