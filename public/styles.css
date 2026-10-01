@@ -94,7 +94,8 @@ h1,.h1{margin:0;font-family:var(--display);font-weight:400;font-size:40px;line-h
 
 /* ---------- closer look ---------- */
 .detail{position:absolute;inset:0;background:var(--page);color:var(--ink);z-index:20;display:flex;flex-direction:column;animation:fadeIn .25s ease-out}
-.detail img{width:100%;height:66%;flex-shrink:0;object-fit:cover;object-position:center top;display:block}
+.detail .frame{height:66%;flex-shrink:0;overflow:hidden}
+.detail img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
 .detail img.contain{object-fit:contain;background:var(--page2)}
 .detail .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between;padding:20px 24px calc(var(--safe-bottom) + 24px)}
 .detail .meta{display:flex;flex-direction:column;gap:6px}
@@ -214,9 +215,19 @@ h1,.h1{margin:0;font-family:var(--display);font-weight:400;font-size:40px;line-h
 .glyph.dots{min-width:34px;height:24px;border-radius:12px;background:rgba(26,24,21,.08);font-size:11px;letter-spacing:1px}
 .glyph.toggle{width:34px;height:20px;border-radius:10px;background:#34C759;position:relative}
 .glyph.toggle i{position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff}
-.glyph.appicon{width:24px;height:24px;border-radius:6px;background:var(--night);color:var(--red);font-family:var(--display);font-size:16px}
+.glyph.appicon{width:26px;height:26px;border-radius:7px;background:#EDE7DD;color:#2A2420;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;box-shadow:inset 0 0 0 1px rgba(26,24,21,.14)}
 .timebox{margin-top:40px}
 .intro .mast{top:calc(var(--safe-top) + 12vh);font-size:72vw;transition:top .5s ease-out}
 .intro .flash{transition:opacity .45s ease-out}
 .intro.ready .flash{opacity:0}
 .intro .foot{bottom:calc(var(--safe-bottom) + 64px)}
+img.fit{object-fit:contain!important;object-position:center center!important}
+.intro .flash img{opacity:0;transition:opacity .7s ease-in-out;animation:none}
+.intro .flash img.in{opacity:1}
+.intro .foot{bottom:calc(var(--safe-bottom) + 96px)}
+.lede.big{font-size:20px;line-height:1.35;font-weight:500}
+.inlink{background:none;border:0;padding:0;font:inherit;color:var(--red);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.biglink{background:none;border:0;padding:0;margin-top:22px;text-align:left;font-family:var(--display);font-size:28px;line-height:1.05;color:var(--red);cursor:pointer;align-self:flex-start}
+.end .keptrow{margin-top:28px}
+.keptrow.small{gap:8px}
+.keptrow.small img{width:calc((100% - 24px) / 4)}

@@ -139,6 +139,45 @@ function coverHTML(edit, it) {
     <div class="issue"><div class="no">No. ${esc(edit.no || 1)}</div><div class="day">${esc(edit.weekday || '')}</div></div></div>`;
 }
 
+
+// Square or wide packshots in a tall frame: show the whole piece, never crop it, sitting on the
+// photo's own background colour (read from a tiny copy when the shop allows; studio grey if not).
+const _edge = new Map();
+function edgeColour(url) {
+  if (_edge.has(url)) return _edge.get(url);
+  const p = new Promise((resolve) => {
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = 12; c.height = 12;
+        const g = c.getContext('2d'); g.drawImage(im, 0, 0, 12, 12);
+        const px = [g.getImageData(0, 0, 1, 1).data, g.getImageData(11, 0, 1, 1).data, g.getImageData(0, 11, 1, 1).data, g.getImageData(11, 11, 1, 1).data];
+        const avg = [0, 1, 2].map((k) => Math.round(px.reduce((t, d) => t + d[k], 0) / px.length));
+        resolve(`rgb(${avg.join(',')})`);
+      } catch { resolve(null); }
+    };
+    im.onerror = () => resolve(null);
+    im.src = /[?&]width=\d+/.test(url) ? url.replace(/([?&]width=)\d+/, '$124') : url;
+    setTimeout(() => resolve(null), 3000);
+  });
+  _edge.set(url, p);
+  return p;
+}
+function fitPhoto(img) {
+  if (!img) return;
+  const apply = () => {
+    const box = img.getBoundingClientRect();
+    if (!img.naturalWidth || !box.height) return;
+    const ar = img.naturalWidth / img.naturalHeight;
+    if (ar < (box.width / box.height) * 1.3) return; // near the frame's shape: fill it
+    img.classList.add('fit');
+    img.style.backgroundColor = '#EBEBEA';
+    edgeColour(img.currentSrc || img.src).then((c) => { if (c) img.style.backgroundColor = c; });
+  };
+  img.complete ? apply() : img.addEventListener('load', apply, { once: true });
+}
+
 // ---------- the deck: cover (optional) then pages to swipe ----------
 function Deck(root, items, { cover = null, hint = false, context, editId, onDone, onTap }) {
   let i = 0, startX = null, dx = 0, moved = false, busy = false, shownAt = 0, t0 = 0, lastX = 0, lastT = 0, vel = 0;
@@ -164,6 +203,7 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
     if (!isCover()) root.insertAdjacentHTML('beforeend', '<button class="sr" data-k="love">Love it</button><button class="sr" data-k="pass">Not for me</button>');
     root.querySelector('[data-k=love]')?.addEventListener('click', () => decide(1));
     root.querySelector('[data-k=pass]')?.addEventListener('click', () => decide(-1));
+    root.querySelectorAll('.page.tail img.ph').forEach(fitPhoto);
     bind(cur);
     shownAt = performance.now();
     preload(items[i + 2]);
@@ -255,7 +295,7 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
 // The first run: Anna (with a flash of three pieces) → what you'll do → double-tap → wishlists →
 // forty swipes → pick three → time → Home Screen → notifications.
 
-const STEPS = ['Set up the double-tap', 'Show her your wishlists', 'Swipe forty things', 'Choose your time', 'Put her on your Home Screen'];
+const STEPS = ['Show Anna your wishlists from any app or platform', 'Swipe a selection of random items to help get a sense of your taste.', 'Choose the time for your Anna’s daily edit', 'Add Anna to your Home Screen'];
 const stepMark = (n) => `<div class="stepmark">${n} of ${STEPS.length}</div>`;
 
 function screenIntro() {
@@ -266,7 +306,6 @@ function screenIntro() {
     <div class="flash" id="flash"></div>
     <div class="mast" aria-label="Anna">An<br>na</div>
     <div class="foot" id="foot">
-      <div class="line">The most tasteful friend you’ll ever have. Twelve things she found, every night.</div>
       <button class="btn light" id="go">Begin</button>
     </div></section>`;
   const el = $app.firstElementChild;
@@ -283,16 +322,18 @@ function screenIntro() {
     const ims = loaded.filter(Boolean);
     if (token !== screenToken) return;
     const box = el.querySelector('#flash');
-    await sleep(700);
+    await sleep(900);
+    // Each piece fades in over the last, holds, then the next: slow enough to see, not a jolt.
     for (const im of ims) {
       if (token !== screenToken) return;
       im.className = 'ph'; im.alt = '';
-      box.replaceChildren(im);
-      await sleep(520);
+      box.appendChild(im);
+      requestAnimationFrame(() => requestAnimationFrame(() => im.classList.add('in')));
+      await sleep(1300);
     }
     reveal();
   }).catch(reveal);
-  setTimeout(reveal, 4500);
+  setTimeout(reveal, 7000);
 }
 
 let _calib = null;
@@ -301,11 +342,9 @@ function calibrationItems() { return (_calib ||= api('calibration').then((r) => 
 function screenRunThrough() {
   saveStep('runthrough');
   const el = show(`
-    <h1>First, five things.</h1>
-    <p class="lede">About five minutes, once.</p>
+    <h1>To set your Anna up</h1>
     <ol class="steps big">${STEPS.map((t, k) => `<li><span class="num">${k + 1}</span><span>${esc(t)}</span></li>`).join('')}</ol>
-    <div class="grow"></div>
-    <button class="btn full red" id="go">Start</button>`);
+    <button class="btn full red" id="go" style="margin-top:18px">Start</button>`);
   el.querySelector('#go').onclick = () => screenBackTap();
 }
 
@@ -316,7 +355,7 @@ function screenBackTap() {
   const el = show(`
     ${stepMark(1)}
     <h1>Set up the double-tap.</h1>
-    <p class="lede">Then a double-tap on the back of your phone shows Anna whatever’s on your screen, in any app.</p>
+    <p class="lede big">Then a double-tap on the back of your phone shows Anna whatever’s on your screen, in any app.</p>
     ${ok ? `<p class="okline" style="margin-top:8px">Your double-tap is already working.</p>` : `
     <ol class="steps" style="margin-top:6px">
       <li><span class="num">1</span><span><b>Add the Anna shortcut</b><span class="sub">Tap the red button, then Add Shortcut. When it asks for your code, type <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b></span></span></li>
@@ -350,18 +389,17 @@ function screenBackTap() {
 function screenWishlists() {
   saveStep('wishlists');
   const el = show(`
-    ${stepMark(2)}
-    <h1>Show her your wishlists.</h1>
+    ${stepMark(1)}
+    <h1>Show Anna your wishlists.</h1>
     <ol class="steps" style="margin-top:6px">
       <li><span class="num">1</span><span>Open a wishlist or saved items, in any shop’s app or site, or Instagram saves.</span></li>
       <li><span class="num">2</span><span>Double-tap the back of your phone.</span></li>
-      <li><span class="num">3</span><span>Scroll down and double-tap again, until you’ve shown her the lot.</span></li>
+      <li><span class="num">3</span><span>Scroll down and double-tap again, until you’ve shown Anna the lot.</span></li>
       <li><span class="num">4</span><span>Come back here.</span></li>
+      <li><span class="num">5</span><span>Already have screenshots? <button class="inlink" id="photos">Add them from Photos</button><span class="sub" id="upmsg"></span></span></li>
     </ol>
     <div class="grow"></div>
-    <button class="btn full red" id="done">I’ve done that</button>
-    <button class="btn link" id="photos">Or add screenshots from Photos</button>
-    <p class="small" id="upmsg" style="margin:0"></p>`);
+    <button class="btn full red" id="done">I’ve done that</button>`);
   el.querySelector('#done').onclick = () => screenSwipeIntro();
   el.querySelector('#photos').onclick = () => pickPhotos(el.querySelector('#upmsg'));
 }
@@ -369,11 +407,10 @@ function screenWishlists() {
 function screenSwipeIntro() {
   saveStep('swipeintro');
   const el = show(`
-    ${stepMark(3)}
-    <h1>Swipe forty things.</h1>
-    <p class="lede">Right if you love it. Left if you don’t. Don’t think too hard.</p>
-    <div class="grow"></div>
-    <button class="btn full red" id="go">Go</button>`);
+    ${stepMark(2)}
+    <h1>Let’s swipe.</h1>
+    <p class="lede big">Right if you love it. Left if you don’t. Tap for a closer look. Don’t think too hard.</p>
+    <button class="btn full red" id="go" style="margin-top:18px">Go</button>`);
   el.querySelector('#go').onclick = () => screenCalibrate();
 }
 
@@ -383,7 +420,9 @@ async function screenCalibrate() {
   $app.innerHTML = '<section class="deck" id="deck"></section>';
   let items;
   try { items = await calibrationItems(); } catch (e) { return screenError(e); }
-  Deck(document.getElementById('deck'), items, { hint: true, context: 'calibration', onDone: () => { flush(); screenMostYou(); } });
+  let deck;
+  deck = Deck(document.getElementById('deck'), items, { hint: true, context: 'calibration', onTap: (it) => closerLook(it, { context: 'calibration', onKeep: () => deck.decide(1) }),
+    onDone: () => { flush(); screenMostYou(); } });
 }
 
 // The same double-tap setup, reachable later from the end of the night and the waiting screen.
@@ -392,7 +431,7 @@ function screenCapture(back = screenHome) {
   const ok = STATE?.user?.shortcut_ok;
   const el = show(`
     <button class="btn link" id="back" style="align-self:flex-start">‹ Back</button>
-    <h1>Show her things from anywhere.</h1>
+    <h1>Show your Anna more things you love.</h1>
     <p class="lede">Double-tap the back of your phone on anything you love, in any app. Anna sees it.</p>
     ${ok ? `<p class="okline" style="margin:8px 0 0">Your double-tap is working.</p>` : `
     <ol class="steps" style="margin-top:8px">
@@ -483,9 +522,9 @@ function screenDropTime() {
   saveStep('droptime');
   const current = STATE?.user?.drop_time || '20:30';
   const el = show(`
-    ${stepMark(4)}
-    <h1>When should tonight’s arrive?</h1>
-    <p class="lede">Every night, at the same time. Change it whenever you like.</p>
+    ${stepMark(3)}
+    <h1>When should today’s Anna arrive?</h1>
+    <p class="lede big">Change it anytime.</p>
     <div class="timebox"><label class="sr" for="t">Time</label><input id="t" type="time" value="${esc(current)}" step="900"></div>
     <button class="btn red center" id="set">Set</button>`);
   const input = el.querySelector('#t');
@@ -511,15 +550,15 @@ function screenHomeScreen() {
   // The Home Screen icon opens whatever address is showing when she adds it: make it just her link.
   try { history.replaceState(null, '', `/?${authQS()}`); } catch {}
   const el = show(`
-    ${stepMark(5)}
-    <h1>Put her on your Home Screen.</h1>
-    <p class="lede">So she can bring you tonight’s, and tell you it’s here.</p>
+    ${stepMark(4)}
+    <h1>Add Anna to your Home Screen.</h1>
+    <p class="lede big">So Anna can bring you each day’s edit, and tell you when it’s here.</p>
     <ol class="hsteps">
       <li><span class="num">1</span><span>Tap ${SAFARI.dots} at the bottom right of Safari.</span></li>
       <li><span class="num">2</span><span>Tap ${SAFARI.share} <b>Share</b>.</span></li>
       <li><span class="num">3</span><span>Tap <b>View More</b>, then ${SAFARI.add} <b>Add to Home Screen</b>.</span></li>
       <li><span class="num">4</span><span>Make sure <b>Open as Web App</b> is on ${SAFARI.toggle}, then tap <b>Add</b>.</span></li>
-      <li><span class="num">5</span><span>Safari closes. Find ${SAFARI.icon} <b>Anna</b> on your Home Screen and tap her. You’ll pick up right here.</span></li>
+      <li><span class="num">5</span><span>Safari closes. Find ${SAFARI.icon} <b>Anna</b> on your Home Screen and tap it. You’ll pick up right here.</span></li>
     </ol>
     <div class="grow"></div>
     <button class="btn link" id="later">I’ll do this later</button>
@@ -580,9 +619,35 @@ async function screenHome() {
     <p class="lede" style="margin-top:8px">Tonight’s arrives at ${esc(res.drop_pretty)}.</p>
     <div class="grow"></div>
     <button class="textlink" id="kept">Everything you’ve kept</button>
-    <button class="btn link" id="show">Show her things from anywhere</button>`, 'wait');
+    <button class="biglink" id="show">Show your Anna more things you love.</button>`, 'wait');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(screenHome);
+}
+
+// The closer look: the photo large, the credit beneath, the shop one tap away.
+function closerLook(it, { context, editId = null, onKeep }) {
+  track({ item_id: it.id, action: 'open', context, edit_id: editId });
+  const d = document.createElement('div');
+  d.className = 'detail';
+  const wide = templateOf(it) === 'landscape';
+  const shop = retailerName(it.source, it.brand) || 'the shop';
+  d.innerHTML = `
+    <div class="frame"><img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer" class="${wide ? 'contain' : ''}"></div>
+    <div class="body">
+      <div>
+        ${it.url ? `<a class="brandlink" href="${esc(it.url)}" target="_blank" rel="noopener">${metaHTML(it)}</a>` : metaHTML(it)}
+        ${it.url ? `<a class="go" href="${esc(it.url)}" target="_blank" rel="noopener">Take me to ${esc(shop)} &rarr;</a>` : ''}
+      </div>
+      <div class="acts">
+        <button class="ring ${it._loved ? 'on' : ''}" aria-label="Keep" id="keep"><i></i></button>
+        <button class="xbtn" aria-label="Close" id="close">&times;</button>
+      </div>
+    </div>`;
+  $app.appendChild(d);
+  fitPhoto(d.querySelector('.frame img'));
+  d.querySelector('#close').onclick = () => d.remove();
+  d.querySelectorAll('a[href]').forEach((a) => a.addEventListener('click', () => { track({ item_id: it.id, action: 'shop', context: 'detail', edit_id: editId }); flush(); }));
+  d.querySelector('#keep').onclick = () => { d.remove(); onKeep?.(); };
 }
 
 function screenEdit(edit) {
@@ -597,28 +662,7 @@ function screenEdit(edit) {
   const items = edit.items.filter((i) => !decided.has(i.id));
   const fresh = decided.size === 0; // the cover opens the issue only the first time she opens it
   let deck;
-  const openDetail = (it) => {
-    track({ item_id: it.id, action: 'open', context: 'edit', edit_id: edit.id });
-    const d = document.createElement('div');
-    d.className = 'detail';
-    const wide = templateOf(it) === 'landscape';
-    d.innerHTML = `
-      <img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer" class="${wide ? 'contain' : ''}">
-      <div class="body">
-        <div>
-          ${it.url ? `<a class="brandlink" href="${esc(it.url)}" target="_blank" rel="noopener">${metaHTML(it)}</a>` : metaHTML(it)}
-          ${it.url ? `<a class="go" href="${esc(it.url)}" target="_blank" rel="noopener">Take me to ${esc(retailerName(it.source, it.brand) || 'the shop')} &rarr;</a>` : ''}
-        </div>
-        <div class="acts">
-          <button class="ring ${it._loved ? 'on' : ''}" aria-label="Keep" id="keep"><i></i></button>
-          <button class="xbtn" aria-label="Close" id="close">&times;</button>
-        </div>
-      </div>`;
-    $app.appendChild(d);
-    d.querySelector('#close').onclick = () => d.remove();
-    d.querySelectorAll('a[href]').forEach((a) => a.addEventListener('click', () => { track({ item_id: it.id, action: 'shop', context: 'detail', edit_id: edit.id }); flush(); }));
-    d.querySelector('#keep').onclick = () => { d.remove(); deck.decide(1); };
-  };
+  const openDetail = (it) => closerLook(it, { context: 'edit', editId: edit.id, onKeep: () => deck.decide(1) });
   deck = Deck(document.getElementById('deck'), items, {
     cover: fresh ? edit : null, hint: true, context: 'edit', editId: edit.id, onTap: openDetail,
     onDone: () => { flush(); api('edit/finished', { method: 'POST', body: {} }).catch(() => {}); screenEnd([...earlier, ...items.filter((i) => i._loved)]); },
@@ -629,11 +673,10 @@ function screenEnd(kept) {
   const when = STATE?.user?.drop_pretty || '8.30pm';
   const el = show(`
     <h1 style="margin-top:40px">That’s tonight.</h1>
-    <div class="keptrow">${kept.map((it) => `<img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">`).join('')}</div>
+    <div class="keptrow small">${kept.slice(0, 8).map((it) => `<img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">`).join('')}</div>
     <p class="endline">Tomorrow at ${esc(when)}.</p>
-    <div class="grow"></div>
-    <button class="textlink" id="kept">Everything you’ve kept</button>
-    <button class="btn link" id="show">Show her things from anywhere</button>`, 'end');
+    <button class="textlink" id="kept" style="margin-top:8px">Everything you’ve kept</button>
+    <button class="biglink" id="show">Show your Anna more things you love.</button>`, 'end');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(() => screenEnd(kept));
 }
