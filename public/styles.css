@@ -231,3 +231,5 @@ img.fit{object-fit:contain!important;object-position:center center!important}
 .end .keptrow{margin-top:28px}
 .keptrow.small{gap:8px}
 .keptrow.small img{width:calc((100% - 24px) / 4)}
+.tile .n{background:transparent;color:var(--red);width:30px;height:30px;border-radius:50%;background:var(--cream)}
+.tile.on{box-shadow:inset 0 0 0 3px var(--red)}

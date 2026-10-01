@@ -295,7 +295,7 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
 // The first run: Anna (with a flash of three pieces) → what you'll do → double-tap → wishlists →
 // forty swipes → pick three → time → Home Screen → notifications.
 
-const STEPS = ['Show Anna your wishlists from any app or platform', 'Swipe a selection of random items to help get a sense of your taste.', 'Choose the time for your Anna’s daily edit', 'Add Anna to your Home Screen'];
+const STEPS = ['Show Anna your wishlists from any app or platform.', 'Swipe a selection of random items to help get a sense of your taste.', 'Choose the time for your Anna’s daily edit.', 'Add Anna to your Home Screen.'];
 const stepMark = (n) => `<div class="stepmark">${n} of ${STEPS.length}</div>`;
 
 function screenIntro() {
@@ -342,7 +342,7 @@ function calibrationItems() { return (_calib ||= api('calibration').then((r) => 
 function screenRunThrough() {
   saveStep('runthrough');
   const el = show(`
-    <h1>To set your Anna up</h1>
+    <h1>To set up your Anna</h1>
     <ol class="steps big">${STEPS.map((t, k) => `<li><span class="num">${k + 1}</span><span>${esc(t)}</span></li>`).join('')}</ol>
     <button class="btn full red" id="go" style="margin-top:18px">Start</button>`);
   el.querySelector('#go').onclick = () => screenBackTap();
@@ -355,12 +355,12 @@ function screenBackTap() {
   const el = show(`
     ${stepMark(1)}
     <h1>Set up the double-tap.</h1>
-    <p class="lede big">Then a double-tap on the back of your phone shows Anna whatever’s on your screen, in any app.</p>
+    <p class="lede big">Then you can show your Anna whatever’s on your screen, in any app.</p>
     ${ok ? `<p class="okline" style="margin-top:8px">Your double-tap is already working.</p>` : `
     <ol class="steps" style="margin-top:6px">
-      <li><span class="num">1</span><span><b>Add the Anna shortcut</b><span class="sub">Tap the red button, then Add Shortcut. When it asks for your code, type <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b></span></span></li>
-      <li><span class="num">2</span><span><b>Turn on the double-tap</b><span class="sub">Open Settings › Accessibility › Touch › Back Tap › Double Tap, and choose Anna</span></span></li>
-      <li><span class="num">3</span><span><b>Come back and try it</b><span class="sub">Double-tap the back of your phone on this screen. The first time, tap Always Allow.</span></span></li>
+      <li><span class="num">1</span><span><b>Add the Anna shortcut.</b><span class="sub">Tap the red button, then Add Shortcut. When it asks for your code, type <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b>.</span></span></li>
+      <li><span class="num">2</span><span><b>Turn on the double-tap.</b><span class="sub">Open Settings › Accessibility › Touch › Back Tap › Double Tap, and choose Anna.</span></span></li>
+      <li><span class="num">3</span><span><b>Come back and try it.</b><span class="sub">Double-tap the back of your phone on this screen. The first time, tap Always Allow.</span></span></li>
     </ol>`}
     <div class="grow"></div>
     ${ok ? '' : `${shortcut ? `<a class="btn full red" href="${esc(shortcut)}" target="_blank" rel="noopener">Add the shortcut</a>` : '<button class="btn full" disabled>Shortcut link coming soon</button>'}
@@ -396,7 +396,7 @@ function screenWishlists() {
       <li><span class="num">2</span><span>Double-tap the back of your phone.</span></li>
       <li><span class="num">3</span><span>Scroll down and double-tap again, until you’ve shown Anna the lot.</span></li>
       <li><span class="num">4</span><span>Come back here.</span></li>
-      <li><span class="num">5</span><span>Already have screenshots? <button class="inlink" id="photos">Add them from Photos</button><span class="sub" id="upmsg"></span></span></li>
+      <li><span class="num">5</span><span>Already have screenshots? <button class="inlink" id="photos">Add them from Photos</button>.<span class="sub" id="upmsg"></span></span></li>
     </ol>
     <div class="grow"></div>
     <button class="btn full red" id="done">I’ve done that</button>`);
@@ -409,7 +409,7 @@ function screenSwipeIntro() {
   const el = show(`
     ${stepMark(2)}
     <h1>Let’s swipe.</h1>
-    <p class="lede big">Right if you love it. Left if you don’t. Tap for a closer look. Don’t think too hard.</p>
+    <p class="lede big">Swipe right if you love it. Swipe left if you don’t. Don’t think too hard.</p>
     <button class="btn full red" id="go" style="margin-top:18px">Go</button>`);
   el.querySelector('#go').onclick = () => screenCalibrate();
 }
@@ -420,9 +420,7 @@ async function screenCalibrate() {
   $app.innerHTML = '<section class="deck" id="deck"></section>';
   let items;
   try { items = await calibrationItems(); } catch (e) { return screenError(e); }
-  let deck;
-  deck = Deck(document.getElementById('deck'), items, { hint: true, context: 'calibration', onTap: (it) => closerLook(it, { context: 'calibration', onKeep: () => deck.decide(1) }),
-    onDone: () => { flush(); screenMostYou(); } });
+  Deck(document.getElementById('deck'), items, { hint: true, context: 'calibration', onDone: () => { flush(); screenMostYou(); } });
 }
 
 // The same double-tap setup, reachable later from the end of the night and the waiting screen.
@@ -435,9 +433,9 @@ function screenCapture(back = screenHome) {
     <p class="lede">Double-tap the back of your phone on anything you love, in any app. Anna sees it.</p>
     ${ok ? `<p class="okline" style="margin:8px 0 0">Your double-tap is working.</p>` : `
     <ol class="steps" style="margin-top:8px">
-      <li><span class="num">1</span><span><b>Add the Anna shortcut</b><span class="sub">Tap the red button, then Add Shortcut. When it asks for your code, type <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b></span></span></li>
-      <li><span class="num">2</span><span><b>Turn on the double-tap</b><span class="sub">Open Settings › Accessibility › Touch › Back Tap › Double Tap, and choose Anna</span></span></li>
-      <li><span class="num">3</span><span><b>Come back and try it</b><span class="sub">Double-tap the back of your phone. The first time, tap Always Allow.</span></span></li>
+      <li><span class="num">1</span><span><b>Add the Anna shortcut.</b><span class="sub">Tap the red button, then Add Shortcut. When it asks for your code, type <b>${esc(AUTH.u)}.${esc(AUTH.k)}</b>.</span></span></li>
+      <li><span class="num">2</span><span><b>Turn on the double-tap.</b><span class="sub">Open Settings › Accessibility › Touch › Back Tap › Double Tap, and choose Anna.</span></span></li>
+      <li><span class="num">3</span><span><b>Come back and try it.</b><span class="sub">Double-tap the back of your phone. The first time, tap Always Allow.</span></span></li>
     </ol>`}
     <div class="grow"></div>
     ${ok ? '' : (shortcut ? `<a class="btn full red" href="${esc(shortcut)}" target="_blank" rel="noopener">Add the shortcut</a>` : '')}
@@ -488,7 +486,7 @@ async function screenMostYou() {
   items = items.slice(0, 9);
   const picked = [];
   const el = show(`
-    <h1>Pick the three that are most you.</h1>
+    <h1>Now, out of the ones you love, pick the three that are most you.</h1>
     <div class="grid3" id="g" style="margin-top:8px"></div>
     <div class="grow"></div>
     <button class="btn full red" id="done" disabled>Done</button>`);
@@ -497,7 +495,7 @@ async function screenMostYou() {
     g.innerHTML = items.map((it) => {
       const n = picked.indexOf(it.id) + 1;
       return `<button class="tile ${n ? 'on' : ''}" data-id="${esc(it.id)}" aria-pressed="${n ? 'true' : 'false'}" aria-label="${esc(it.name || 'piece')}">
-        <img src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer">${n ? `<span class="n">${n}</span>` : ''}</button>`;
+        <img src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer">${n ? `<span class="n" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>` : ''}</button>`;
     }).join('');
     el.querySelector('#done').disabled = picked.length < 3;
   };
@@ -552,7 +550,7 @@ function screenHomeScreen() {
   const el = show(`
     ${stepMark(4)}
     <h1>Add Anna to your Home Screen.</h1>
-    <p class="lede big">So Anna can bring you each day’s edit, and tell you when it’s here.</p>
+    <p class="lede big">Your Anna will bring you a personal edition once a day.</p>
     <ol class="hsteps">
       <li><span class="num">1</span><span>Tap ${SAFARI.dots} at the bottom right of Safari.</span></li>
       <li><span class="num">2</span><span>Tap ${SAFARI.share} <b>Share</b>.</span></li>
