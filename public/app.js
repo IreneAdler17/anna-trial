@@ -82,6 +82,27 @@ function flush(keepalive = false) {
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(true); });
 
+// ---------- breadcrumbs ----------
+// A short trail of what happened on this phone (renders, touches, errors), sent to the server so
+// "it froze" can be diagnosed from the admin health check. No personal content: only screen states.
+const BUILD = '2026-10-02g';
+const trail = [];
+let trailDirty = false;
+function crumb(m) { trail.push(`${Math.round(performance.now())} ${m}`); if (trail.length > 70) trail.shift(); trailDirty = true; }
+const describe = (el) => (el && el.nodeType === 1 ? `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : ''}` : String(el));
+function sendTrail(keepalive = false) {
+  if (!trailDirty || !AUTH.u || !AUTH.k) return;
+  trailDirty = false;
+  fetch(`/api/clientlog?${authQS()}`, { method: 'POST', keepalive, headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ v: BUILD, home_screen: isStandalone, w: innerWidth, h: innerHeight, trail }) }).catch(() => {});
+}
+setInterval(sendTrail, 4000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') sendTrail(true); });
+window.addEventListener('error', (e) => crumb(`ERROR ${e.message} @${String(e.filename || '').split('/').pop()}:${e.lineno}`));
+window.addEventListener('unhandledrejection', (e) => crumb(`REJECTED ${e.reason?.message || e.reason}`));
+document.addEventListener('pointerdown', (e) => crumb(`touch on ${describe(e.target)}`), true);
+document.addEventListener('touchstart', (e) => crumb(`touchstart on ${describe(e.target)}`), { capture: true, passive: true });
+
 // ---------- screen helpers ----------
 function show(html, cls = '') {
   screenToken++;
@@ -180,7 +201,7 @@ function fitPhoto(img) {
 
 // ---------- the deck: cover (optional) then pages to swipe ----------
 function Deck(root, items, { cover = null, hint = false, context, editId, onDone, onTap }) {
-  let i = 0, startX = null, startY = 0, dx = 0, dy = 0, moved = false, busy = false, shownAt = 0, t0 = 0, lastX = 0, lastT = 0, vel = 0;
+  let i = 0, startX = null, startY = 0, dx = 0, dy = 0, moved = false, busy = false, busyAt = 0, shownAt = 0, t0 = 0, lastX = 0, lastT = 0, vel = 0;
   let hinting = hint && !seenHint();
   let cur = null;
   const width = root.clientWidth || 390;
@@ -197,18 +218,26 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
     root.innerHTML = '';
     root.className = 'deck' + (hinting && i === 0 ? ' hinting' : '');
     if (i >= items.length) { onDone?.(); return; }
+    // The next piece waits underneath a piece (never under the cover: one thing on screen at a time there).
+    const under = !isCover() && i + 1 < items.length ? html(i + 1).replace('class="page', 'class="page under') : '';
     const frag = document.createElement('div');
-    frag.innerHTML = (i + 1 < items.length ? html(i + 1).replace('class="page', 'class="page under') : '') + html(i);
-    root.append(...frag.children);
-    cur = root.lastElementChild;
-    if (hinting && i === 0) cur.classList.add('hint');
-    if (!isCover()) root.insertAdjacentHTML('beforeend', '<button class="sr" data-k="love">Love it</button><button class="sr" data-k="pass">Not for me</button>');
-    root.querySelector('[data-k=love]')?.addEventListener('click', () => decide(1));
-    root.querySelector('[data-k=pass]')?.addEventListener('click', () => decide(-1));
-    root.querySelectorAll('.page.tail img.ph').forEach(fitPhoto);
+    frag.innerHTML = under + html(i);
+    const pages = [...frag.children];
+    root.append(...pages);
+    cur = pages[pages.length - 1];
+    cur.classList.add('top');
+    // Touch handling goes on before anything optional, so nothing below can leave a page that won't swipe.
     bind(cur);
     shownAt = performance.now();
-    preload(items[i + 2]);
+    crumb(`render i=${i}/${items.length} top=${describe(cur)} under=${pages.length > 1}`);
+    try {
+      if (hinting && i === 0) cur.classList.add('hint');
+      if (!isCover()) root.insertAdjacentHTML('beforeend', '<button class="sr" data-k="love">Love it</button><button class="sr" data-k="pass">Not for me</button>');
+      root.querySelector('[data-k=love]')?.addEventListener('click', () => decide(1));
+      root.querySelector('[data-k=pass]')?.addEventListener('click', () => decide(-1));
+      root.querySelectorAll('.page.tail img.ph').forEach(fitPhoto);
+      preload(items[i + 2]);
+    } catch (e) { crumb(`ERROR in render extras: ${e.message}`); }
     // No server layout yet (the first swipes): a wide photo becomes a Landscape page once it has loaded.
     const it = items[i];
     if (it && !isCover() && !it.layout?.template && !it._wide) {
@@ -242,7 +271,9 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
 
   function bind(page) {
     page.addEventListener('pointerdown', (e) => {
-      if (busy) return;
+      // A transition lasts under 200ms; if "busy" is somehow still set long after, clear it.
+      if (busy && performance.now() - busyAt > 700) { crumb('busy was stuck: cleared'); busy = false; }
+      if (busy) { crumb('down ignored: busy'); return; }
       stopHint();
       startX = e.clientX; startY = e.clientY; dx = 0; dy = 0; moved = false; t0 = performance.now(); lastX = e.clientX; lastT = t0; vel = 0;
       try { page.setPointerCapture(e.pointerId); } catch {}
@@ -262,6 +293,7 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
     const end = () => {
       if (startX === null) return;
       startX = null;
+      crumb(`up dx=${Math.round(dx)} dy=${Math.round(dy)} moved=${moved} cover=${Boolean(isCover())}`);
       if (!moved) { page.style.transform = ''; page.style.opacity = ''; ground(0); if (isCover()) advance(); else onTap?.(items[i]); return; }
       if (isCover()) { if (Math.hypot(dx, dy) > 40) advance(dx > 0 ? 1 : -1); else { page.style.transition = 'transform .23s ease-out'; page.style.transform = ''; } return; }
       // A short flick counts as much as a long drag.
@@ -271,11 +303,11 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
       else { page.style.transition = 'transform .23s ease-out, opacity .23s ease-out'; page.style.transform = ''; page.style.opacity = ''; ground(0); }
     };
     page.addEventListener('pointerup', end);
-    page.addEventListener('pointercancel', () => { startX = null; page.style.transform = ''; page.style.opacity = ''; ground(0); });
+    page.addEventListener('pointercancel', () => { crumb('cancel'); startX = null; page.style.transform = ''; page.style.opacity = ''; ground(0); });
   }
 
   function advance(dir = -1) {
-    busy = true;
+    busy = true; busyAt = performance.now(); crumb('cover opened');
     const page = cur;
     page.style.transition = 'transform .18s ease-in, opacity .18s ease-in';
     page.style.transform = `translateX(${dir * 120}%) rotate(${dir * 4}deg)`;
@@ -284,7 +316,7 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
 
   function decide(dir) {
     if (busy || i < 0 || i >= items.length) return;
-    busy = true;
+    busy = true; busyAt = performance.now(); crumb(`decide ${dir > 0 ? 'love' : 'pass'} i=${i}`);
     stopHint();
     const it = items[i];
     track({ item_id: it.id, action: dir > 0 ? 'love' : 'pass', context, edit_id: editId, ms: performance.now() - shownAt });
@@ -644,6 +676,7 @@ async function screenHome() {
 
 // The closer look: the photo large, the credit beneath, the shop one tap away.
 function closerLook(it, { context, editId = null, onKeep }) {
+  crumb('closer look opened');
   track({ item_id: it.id, action: 'open', context, edit_id: editId });
   const d = document.createElement('div');
   d.className = 'detail';
@@ -683,7 +716,7 @@ function screenEdit(edit) {
   let deck;
   const openDetail = (it) => closerLook(it, { context: 'edit', editId: edit.id, onKeep: () => deck.decide(1) });
   deck = Deck(document.getElementById('deck'), items, {
-    cover: fresh ? edit : null, hint: true, context: 'edit', editId: edit.id, onTap: openDetail,
+    cover: fresh ? edit : null, hint: false, context: 'edit', editId: edit.id, onTap: openDetail,
     onDone: () => { flush(); api('edit/finished', { method: 'POST', body: {} }).catch(() => {}); screenEnd([...earlier, ...items.filter((i) => i._loved)]); },
   });
 }

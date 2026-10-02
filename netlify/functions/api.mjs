@@ -119,6 +119,7 @@ async function admin(req, url) {
         cutouts: Boolean(process.env.CUTOUT_API_KEY) },
       this_site: /deploy-preview/.test(url.host) ? 'preview' : /localhost/.test(url.host) ? 'local' : 'live',
       timer_last_runs: ticks.slice(0, 5), builds_last: builds.slice(0, 6),
+      phone_reports: ((await store.loadJson(`_config/phone-${user.id}.json`)) || []).slice(0, 2),
       timer_note: ticks.length ? null : 'No timer runs recorded yet: the timer only runs on the live site, and only records once this version is live.',
     });
   }
@@ -179,6 +180,14 @@ export default async (req) => {
       if (!useCached) await store.upsertItems(items);
       return json({ items: items.map(publicItem), curated: Boolean(useCached),
         build: cached ? { at: cached.created_at, curated: cached.curated, note: cached.note, candidates: cached.candidates, count: cached.items.length } : null });
+    }
+
+    if (route === 'clientlog' && req.method === 'POST') {
+      // What her phone did (screen states, touches, errors), kept for the admin health check.
+      await store.logLine(`_config/phone-${user.id}.json`, { v: String(body.v || '').slice(0, 20), home_screen: Boolean(body.home_screen),
+        screen: `${Number(body.w) || 0}x${Number(body.h) || 0}`, agent: String(req.headers.get('user-agent') || '').slice(0, 160),
+        trail: (Array.isArray(body.trail) ? body.trail : []).slice(-70).map((t) => String(t).slice(0, 160)) }, 4);
+      return json({ ok: true });
     }
 
     if (route === 'events' && req.method === 'POST') {

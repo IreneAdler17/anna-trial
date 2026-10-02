@@ -236,3 +236,5 @@ img.fit{object-fit:contain!important;object-position:center center!important}
 .biglink.red{color:var(--red)}
 .biglink.ink{color:var(--ink)}
 .biglink+.biglink{margin-top:14px}
+.page{z-index:1}
+.page.top{z-index:2}
