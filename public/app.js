@@ -180,7 +180,7 @@ function fitPhoto(img) {
 
 // ---------- the deck: cover (optional) then pages to swipe ----------
 function Deck(root, items, { cover = null, hint = false, context, editId, onDone, onTap }) {
-  let i = 0, startX = null, dx = 0, moved = false, busy = false, shownAt = 0, t0 = 0, lastX = 0, lastT = 0, vel = 0;
+  let i = 0, startX = null, startY = 0, dx = 0, dy = 0, moved = false, busy = false, shownAt = 0, t0 = 0, lastX = 0, lastT = 0, vel = 0;
   let hinting = hint && !seenHint();
   let cur = null;
   const width = root.clientWidth || 390;
@@ -189,7 +189,9 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
 
   function preload(it) { if (it) { const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = it.image_url; if (it.layout?.cutout) { const c = new Image(); c.src = it.layout.cutout; } } }
 
-  function html(k) { return k === -1 ? coverHTML(cover, items[0]) : pageHTML(items[k], width); }
+  // The cover shows a piece from the middle of the issue, never the one on the very next page.
+  const coverItem = items[Math.floor(items.length / 2)] || items[0];
+  function html(k) { return k === -1 ? coverHTML(cover, coverItem) : pageHTML(items[k], width); }
 
   function render() {
     root.innerHTML = '';
@@ -242,16 +244,18 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
     page.addEventListener('pointerdown', (e) => {
       if (busy) return;
       stopHint();
-      startX = e.clientX; dx = 0; moved = false; t0 = performance.now(); lastX = e.clientX; lastT = t0; vel = 0;
+      startX = e.clientX; startY = e.clientY; dx = 0; dy = 0; moved = false; t0 = performance.now(); lastX = e.clientX; lastT = t0; vel = 0;
       try { page.setPointerCapture(e.pointerId); } catch {}
       page.style.transition = 'none';
     });
     page.addEventListener('pointermove', (e) => {
       if (startX === null) return;
-      dx = e.clientX - startX;
+      dx = e.clientX - startX; dy = e.clientY - startY;
       const now = performance.now();
       if (now > lastT) { vel = (e.clientX - lastX) / (now - lastT); lastX = e.clientX; lastT = now; }
-      if (Math.abs(dx) > 6) moved = true;
+      // Any real movement, in any direction, is not a tap: an upward flick (the habit from feeds)
+      // used to count as a tap and opened the closer look, which then looked like a frozen page.
+      if (Math.hypot(dx, dy) > 8) moved = true;
       page.style.transform = `translateX(${dx}px) rotate(${dx / 17}deg)`;
       if (!isCover()) { page.style.opacity = dx < 0 ? String(Math.max(0.35, 1 - (-dx / 220) * 0.6)) : '1'; ground(dx); }
     });
@@ -259,7 +263,7 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
       if (startX === null) return;
       startX = null;
       if (!moved) { page.style.transform = ''; page.style.opacity = ''; ground(0); if (isCover()) advance(); else onTap?.(items[i]); return; }
-      if (isCover()) { if (Math.abs(dx) > 60) advance(dx < 0 ? -1 : 1); else { page.style.transition = 'transform .23s ease-out'; page.style.transform = ''; } return; }
+      if (isCover()) { if (Math.hypot(dx, dy) > 40) advance(dx > 0 ? 1 : -1); else { page.style.transition = 'transform .23s ease-out'; page.style.transform = ''; } return; }
       // A short flick counts as much as a long drag.
       const flick = Math.abs(vel) > 0.45 && Math.abs(dx) > 30;
       if (dx > 60 || (flick && dx > 0)) decide(1);
@@ -660,6 +664,7 @@ function closerLook(it, { context, editId = null, onKeep }) {
   $app.appendChild(d);
   fitPhoto(d.querySelector('.frame img'));
   d.querySelector('#close').onclick = () => d.remove();
+  d.querySelector('.frame').onclick = () => d.remove();
   d.querySelectorAll('a[href]').forEach((a) => a.addEventListener('click', () => { track({ item_id: it.id, action: 'shop', context: 'detail', edit_id: editId }); flush(); }));
   d.querySelector('#keep').onclick = () => { d.remove(); onKeep?.(); };
 }
