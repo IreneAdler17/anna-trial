@@ -109,7 +109,7 @@ async function admin(req, url) {
       screenshots_waiting: (await store.listCaptures(user.id, { status: 'pending', limit: 50 })).length,
       keys_present: { anthropic: Boolean(process.env.ANTHROPIC_API_KEY), notifications: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
         cutouts: Boolean(process.env.CUTOUT_API_KEY) },
-      this_site: process.env.CONTEXT || 'local',
+      this_site: /deploy-preview/.test(url.host) ? 'preview' : /localhost/.test(url.host) ? 'local' : 'live',
       timer_last_runs: ticks.slice(0, 5), builds_last: builds.slice(0, 6),
       timer_note: ticks.length ? null : 'No timer runs recorded yet: the timer only runs on the live site, and only records once this version is live.',
     });

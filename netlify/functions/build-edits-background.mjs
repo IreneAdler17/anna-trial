@@ -22,7 +22,7 @@ export default async (req) => {
     try {
       const edit = await buildEdit(user, date);
       await store.logLine('_config/build-log.json', { user: id, date, ok: true, pieces: edit.items.length,
-        pages: edit.items.map((i) => i.template || '-').join(' '), secs: Math.round((Date.now() - t0) / 1000), site: process.env.CONTEXT || null });
+        pages: edit.items.map((i) => i.template || '-').join(' '), note: edit.note || null, secs: Math.round((Date.now() - t0) / 1000), site: process.env.CONTEXT || null });
     } catch (err) {
       console.error('[build]', id, err.message);
       await store.logLine('_config/build-log.json', { user: id, date, ok: false, error: String(err.message || err).slice(0, 400),
