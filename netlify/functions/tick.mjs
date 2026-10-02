@@ -15,6 +15,7 @@ async function trigger(name, body) {
 export default async () => {
   const users = (await store.listUsers()).filter((u) => u.stage === 'ready' || u.onboarded_at);
   const toBuild = [];
+  const notified = [];
   let refreshSources = false;
 
   for (const u of users) {
@@ -26,12 +27,18 @@ export default async () => {
       const r = await pushToUser(u.id, { title: 'Anna', body: 'Today’s Anna edition is here.', url: '/?open=edit' });
       await store.updateEdit(edit.id, { notified_at: new Date().toISOString() });
       console.log('[tick] notified', u.id, r);
+      notified.push({ user: u.id, sent: r.sent ?? 0, reason: r.reason || null });
     }
     // Refresh the fresh sources once a day, early in the first build window.
     if (!edit && minutes >= drop - BUILD_AHEAD_MINUTES && minutes < drop - BUILD_AHEAD_MINUTES + 15) refreshSources = true;
   }
 
   if ((await store.listCaptures(null, { status: 'pending', limit: 1 })).length) await trigger('process-captures-background');
-  if (toBuild.length) await trigger('build-edits-background', { users: toBuild, refreshSources });
+  let kicked = null;
+  if (toBuild.length) kicked = await kickBackground('build-edits-background', { users: toBuild, refreshSources });
   console.log('[tick]', { users: users.length, building: toBuild });
+  // Only worth a line when something happened, plus one heartbeat an hour.
+  if (toBuild.length || notified.length || new Date().getMinutes() < 15) {
+    await store.logLine('_config/tick-log.json', { ready: users.map((u) => u.id), building: toBuild, kicked, notified });
+  }
 };

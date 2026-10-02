@@ -82,8 +82,37 @@ async function admin(req, url) {
   if (action === 'build') {
     const user = await store.getUser(url.searchParams.get('u'));
     if (!user) return json({ error: 'no such user' }, 404);
-    const edit = await buildEdit(user, localNow(user.tz).date);
-    return json({ ok: true, pieces: edit.items.length });
+    // Building takes a minute or two (Claude looks at the photos), longer than a web request may
+    // run: hand it to the background job on this same deploy and read the result with action=health.
+    if (url.searchParams.get('wait') !== '1') {
+      const status = await kickBackground('build-edits-background', { users: [user.id], force: true }, url.origin);
+      return json({ ok: status === 202 || status === 200, started: status, next: 'Give it two minutes, then open action=health&u=' + user.id });
+    }
+    try {
+      const edit = await buildEdit(user, localNow(user.tz).date);
+      return json({ ok: true, pieces: edit.items.length });
+    } catch (err) { return json({ ok: false, error: String(err.message || err).slice(0, 400) }, 500); }
+  }
+  if (action === 'health') {
+    // Everything needed to answer "why didn't my edition arrive?" — no keys, no links.
+    const user = await store.getUser(url.searchParams.get('u'));
+    if (!user) return json({ error: 'no such user' }, 404);
+    const { date, minutes } = localNow(user.tz);
+    const edit = await store.getEdit(user.id, date);
+    const hhmm = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+    const ticks = (await store.loadJson('_config/tick-log.json')) || [];
+    const builds = ((await store.loadJson('_config/build-log.json')) || []).filter((b) => !b.user || b.user === user.id);
+    return json({
+      her_time_now: `${date} ${hhmm}`, stage: user.stage, drop_time: user.drop_time, finished_setup: user.stage === 'ready' || Boolean(user.onboarded_at),
+      todays_edition: edit ? { built_at: edit.created_at, pieces: edit.items.length, notified_at: edit.notified_at, opened_at: edit.opened_at } : null,
+      phones_with_notifications_on: (await store.listPush(user.id)).length,
+      screenshots_waiting: (await store.listCaptures(user.id, { status: 'pending', limit: 50 })).length,
+      keys_present: { anthropic: Boolean(process.env.ANTHROPIC_API_KEY), notifications: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+        cutouts: Boolean(process.env.CUTOUT_API_KEY) },
+      this_site: process.env.CONTEXT || 'local',
+      timer_last_runs: ticks.slice(0, 5), builds_last: builds.slice(0, 6),
+      timer_note: ticks.length ? null : 'No timer runs recorded yet: the timer only runs on the live site, and only records once this version is live.',
+    });
   }
   if (action === 'vapid') {
     // One-off: makes the notification key pair inside your own site, so the private key never leaves it.
