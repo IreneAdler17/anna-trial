@@ -85,7 +85,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // ---------- breadcrumbs ----------
 // A short trail of what happened on this phone (renders, touches, errors), sent to the server so
 // "it froze" can be diagnosed from the admin health check. No personal content: only screen states.
-const BUILD = '2026-10-02h';
+const BUILD = '2026-10-02i';
 const trail = [];
 let trailDirty = false;
 function crumb(m) { trail.push(`${Math.round(performance.now())} ${m}`); if (trail.length > 70) trail.shift(); trailDirty = true; }
@@ -161,30 +161,7 @@ function coverHTML(edit, it) {
 }
 
 
-// Square or wide packshots in a tall frame: show the whole piece, never crop it, sitting on the
-// photo's own background colour (read from a tiny copy when the shop allows; studio grey if not).
-const _edge = new Map();
-function edgeColour(url) {
-  if (_edge.has(url)) return _edge.get(url);
-  const p = new Promise((resolve) => {
-    const im = new Image();
-    im.crossOrigin = 'anonymous';
-    im.onload = () => {
-      try {
-        const c = document.createElement('canvas'); c.width = 12; c.height = 12;
-        const g = c.getContext('2d'); g.drawImage(im, 0, 0, 12, 12);
-        const px = [g.getImageData(0, 0, 1, 1).data, g.getImageData(11, 0, 1, 1).data, g.getImageData(0, 11, 1, 1).data, g.getImageData(11, 11, 1, 1).data];
-        const avg = [0, 1, 2].map((k) => Math.round(px.reduce((t, d) => t + d[k], 0) / px.length));
-        resolve(`rgb(${avg.join(',')})`);
-      } catch { resolve(null); }
-    };
-    im.onerror = () => resolve(null);
-    im.src = /[?&]width=\d+/.test(url) ? url.replace(/([?&]width=)\d+/, '$124') : url;
-    setTimeout(() => resolve(null), 3000);
-  });
-  _edge.set(url, p);
-  return p;
-}
+// Square or wide packshots in a tall frame: show the whole piece, never crop it.
 function fitPhoto(img) {
   if (!img) return;
   const apply = () => {
@@ -192,9 +169,7 @@ function fitPhoto(img) {
     if (!img.naturalWidth || !box.height) return;
     const ar = img.naturalWidth / img.naturalHeight;
     if (ar < (box.width / box.height) * 1.3) return; // near the frame's shape: fill it
-    img.classList.add('fit');
-    img.style.backgroundColor = '#EBEBEA';
-    edgeColour(img.currentSrc || img.src).then((c) => { if (c) img.style.backgroundColor = c; });
+    img.classList.add('fit'); // shown whole and blended into the page (see img.fit), so a white studio ground becomes the page
   };
   img.complete ? apply() : img.addEventListener('load', apply, { once: true });
 }
@@ -705,8 +680,8 @@ async function screenHome() {
     <div class="mast" aria-label="Anna">An<br>na</div>
     <p class="lede big" style="margin-top:8px">${esc(arrivesLine(STATE?.user?.drop_time))}</p>
     <div class="grow"></div>
-    <button class="biglink red" id="show">Show your Anna more things you love.</button>
-    <button class="biglink red" id="kept">Here’s everything you liked.</button>`, 'wait');
+    <button class="biglink ink" id="kept">See everything you’ve liked <span class="arr">→</span></button>
+    ${MORE_HTML}`, 'wait');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(screenHome);
 }
@@ -758,14 +733,17 @@ function screenEdit(edit) {
   });
 }
 
+// The standing invitation under the day's edition: one red line, one plain line, the whole block tappable.
+const MORE_HTML = `<div class="rule"></div>
+    <button class="more" id="show"><span class="biglink red">The more things you show Anna, the better she will get.</span>
+    <span class="morebody">Use the double tap on the back of your phone to keep adding.</span></button>`;
+
 function screenEnd(kept) {
-  const when = STATE?.user?.drop_pretty || '8.30pm';
   const el = show(`
     <h1 style="margin-top:40px">That’s today.</h1>
+    <button class="biglink ink" id="kept">See everything you’ve liked <span class="arr">→</span></button>
     <div class="keptrow small">${kept.slice(0, 8).map((it) => `<img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer">`).join('')}</div>
-    <p class="endline">${esc(arrivesLine(STATE?.user?.drop_time, { done: true }))}</p>
-    <button class="biglink red" id="show">Show your Anna more things you love.</button>
-    <button class="biglink red" id="kept">Here’s everything you liked.</button>`, 'end');
+    ${MORE_HTML}`, 'end');
   el.querySelector('#kept').onclick = screenKept;
   el.querySelector('#show').onclick = () => screenCapture(() => screenEnd(kept));
 }
@@ -775,7 +753,7 @@ async function screenKept() {
   try { items = (await api('kept')).items; } catch {}
   const el = show(`
     <button class="btn link" id="back" style="align-self:flex-start">‹ Back</button>
-    <h1>Here’s everything you liked.</h1>
+    <h1>Everything you’ve liked.</h1>
     ${items.length ? '' : '<p class="lede">Nothing yet. Swipe right on anything you love today.</p>'}
     <div class="keptrow" style="margin-top:8px">${items.map((it) => `<a href="${esc(it.url || '#')}" target="_blank" rel="noopener"><img src="${esc(it.image_url)}" alt="${esc(it.name || '')}" referrerpolicy="no-referrer"></a>`).join('')}</div>`);
   el.querySelector('#back').onclick = screenHome;
