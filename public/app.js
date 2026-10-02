@@ -85,7 +85,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // ---------- breadcrumbs ----------
 // A short trail of what happened on this phone (renders, touches, errors), sent to the server so
 // "it froze" can be diagnosed from the admin health check. No personal content: only screen states.
-const BUILD = '2026-10-02g';
+const BUILD = '2026-10-02h';
 const trail = [];
 let trailDirty = false;
 function crumb(m) { trail.push(`${Math.round(performance.now())} ${m}`); if (trail.length > 70) trail.shift(); trailDirty = true; }
@@ -269,42 +269,79 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
   // Love warms the page with vermilion as it moves right; pass fades it as it moves left.
   function ground(d) { if (cur) cur.style.setProperty('--warm', String(Math.max(0, Math.min(0.32, d / 300)))); }
 
+  // A drag is followed on the window, not the page: the release must be heard wherever it lands and
+  // whatever else is on the page (on the deploy preview, Netlify's toolbar; a mouse leaving the column).
   function bind(page) {
-    page.addEventListener('pointerdown', (e) => {
-      // A transition lasts under 200ms; if "busy" is somehow still set long after, clear it.
-      if (busy && performance.now() - busyAt > 700) { crumb('busy was stuck: cleared'); busy = false; }
-      if (busy) { crumb('down ignored: busy'); return; }
-      stopHint();
-      startX = e.clientX; startY = e.clientY; dx = 0; dy = 0; moved = false; t0 = performance.now(); lastX = e.clientX; lastT = t0; vel = 0;
-      try { page.setPointerCapture(e.pointerId); } catch {}
-      page.style.transition = 'none';
-    });
-    page.addEventListener('pointermove', (e) => {
-      if (startX === null) return;
-      dx = e.clientX - startX; dy = e.clientY - startY;
+    let active = false;
+    const onMove = (e) => {
+      if (!active) return;
+      const pt = e.touches ? e.touches[0] : e;
+      if (!pt) return;
+      dx = pt.clientX - startX; dy = pt.clientY - startY;
       const now = performance.now();
-      if (now > lastT) { vel = (e.clientX - lastX) / (now - lastT); lastX = e.clientX; lastT = now; }
-      // Any real movement, in any direction, is not a tap: an upward flick (the habit from feeds)
-      // used to count as a tap and opened the closer look, which then looked like a frozen page.
+      if (now > lastT) { vel = (pt.clientX - lastX) / (now - lastT); lastX = pt.clientX; lastT = now; }
+      // Any real movement, in any direction, is not a tap.
       if (Math.hypot(dx, dy) > 8) moved = true;
       page.style.transform = `translateX(${dx}px) rotate(${dx / 17}deg)`;
       if (!isCover()) { page.style.opacity = dx < 0 ? String(Math.max(0.35, 1 - (-dx / 220) * 0.6)) : '1'; ground(dx); }
-    });
-    const end = () => {
-      if (startX === null) return;
-      startX = null;
-      crumb(`up dx=${Math.round(dx)} dy=${Math.round(dy)} moved=${moved} cover=${Boolean(isCover())}`);
+    };
+    const settle = () => { page.style.transition = 'transform .23s ease-out, opacity .23s ease-out'; page.style.transform = ''; page.style.opacity = ''; ground(0); };
+    const stop = () => {
+      active = false; startX = null;
+      for (const [t, f] of listeners) window.removeEventListener(t, f, true);
+    };
+    const onUp = (e) => {
+      if (!active) return;
+      stop();
+      crumb(`up(${e.type}) dx=${Math.round(dx)} dy=${Math.round(dy)} moved=${moved} cover=${Boolean(isCover())}`);
+      if (cur !== page) return;
       if (!moved) { page.style.transform = ''; page.style.opacity = ''; ground(0); if (isCover()) advance(); else onTap?.(items[i]); return; }
-      if (isCover()) { if (Math.hypot(dx, dy) > 40) advance(dx > 0 ? 1 : -1); else { page.style.transition = 'transform .23s ease-out'; page.style.transform = ''; } return; }
+      if (isCover()) { if (Math.hypot(dx, dy) > 40) advance(dx > 0 ? 1 : -1); else settle(); return; }
       // A short flick counts as much as a long drag.
       const flick = Math.abs(vel) > 0.45 && Math.abs(dx) > 30;
       if (dx > 60 || (flick && dx > 0)) decide(1);
       else if (dx < -60 || (flick && dx < 0)) decide(-1);
-      else { page.style.transition = 'transform .23s ease-out, opacity .23s ease-out'; page.style.transform = ''; page.style.opacity = ''; ground(0); }
+      else settle();
     };
-    page.addEventListener('pointerup', end);
-    page.addEventListener('pointercancel', () => { crumb('cancel'); startX = null; page.style.transform = ''; page.style.opacity = ''; ground(0); });
+    const onCancel = (e) => { if (!active) return; stop(); crumb(`cancel(${e.type})`); settle(); };
+    const listeners = [['pointermove', onMove], ['pointerup', onUp], ['mouseup', onUp], ['touchend', onUp], ['pointercancel', onCancel], ['touchcancel', onCancel], ['blur', onCancel]];
+    page.addEventListener('pointerdown', (e) => {
+      // A transition lasts under 200ms; if "busy" is somehow still set long after, clear it.
+      if (busy && performance.now() - busyAt > 700) { crumb('busy was stuck: cleared'); busy = false; }
+      if (busy) { crumb('down ignored: busy'); return; }
+      if (active) stop();
+      stopHint();
+      active = true;
+      startX = e.clientX; startY = e.clientY; dx = 0; dy = 0; moved = false; t0 = performance.now(); lastX = e.clientX; lastT = t0; vel = 0;
+      page.style.transition = 'none';
+      for (const [t, f] of listeners) window.addEventListener(t, f, true);
+    });
+    page.addEventListener('dragstart', (e) => e.preventDefault());
   }
+
+  // On a computer: arrow keys, and a two-finger sideways swipe on the trackpad.
+  let wheelSum = 0, wheelAt = 0, wheelLock = 0;
+  const onKey = (e) => {
+    if (!root.isConnected) { document.removeEventListener('keydown', onKey); return; }
+    if (document.querySelector('.detail')) { if (e.key === 'Escape') document.querySelector('.detail').remove(); return; }
+    if (isCover()) { if (['ArrowRight', 'ArrowLeft', 'Enter', ' '].includes(e.key)) { e.preventDefault(); if (!busy) advance(); } return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); crumb('key right'); decide(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); crumb('key left'); decide(-1); }
+  };
+  document.addEventListener('keydown', onKey);
+  root.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    const now = performance.now();
+    if (now < wheelLock) return;
+    if (now - wheelAt > 250) wheelSum = 0;
+    wheelAt = now; wheelSum += e.deltaX;
+    if (Math.abs(wheelSum) < 70) return;
+    const dir = wheelSum > 0 ? -1 : 1; // fingers moving left (content going left) is a pass
+    wheelSum = 0; wheelLock = now + 600;
+    crumb(`trackpad ${dir > 0 ? 'right' : 'left'}`);
+    if (isCover()) { if (!busy) advance(dir); } else decide(dir);
+  }, { passive: false });
 
   function advance(dir = -1) {
     busy = true; busyAt = performance.now(); crumb('cover opened');
