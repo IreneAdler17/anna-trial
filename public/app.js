@@ -217,9 +217,15 @@ function Deck(root, items, { cover = null, hint = false, context, editId, onDone
     // A picture that won't load is skipped quietly, never shown as a blank page.
     const im = cur.querySelector('img.ph, img.wide, img.obj');
     if (im && !isCover()) {
-      const skip = () => { if (cur?.isConnected && !busy) { items.splice(i, 1); render(); } };
+      // Only ever the page this photo belongs to: a late failure from a page she has already
+      // swiped past must not remove the piece now in front of her.
+      const page = cur, item = items[i];
+      const skip = () => {
+        if (cur !== page || items[i] !== item || busy) return;
+        track({ item_id: item.id, action: 'imgfail', context, edit_id: editId });
+        items.splice(i, 1); render();
+      };
       im.addEventListener('error', skip, { once: true });
-      if (im.complete && im.naturalWidth === 0 && im.src) skip();
     }
   }
 

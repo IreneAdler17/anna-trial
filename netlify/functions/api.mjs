@@ -104,7 +104,15 @@ async function admin(req, url) {
     const builds = ((await store.loadJson('_config/build-log.json')) || []).filter((b) => !b.user || b.user === user.id);
     return json({
       her_time_now: `${date} ${hhmm}`, stage: user.stage, drop_time: user.drop_time, finished_setup: user.stage === 'ready' || Boolean(user.onboarded_at),
-      todays_edition: edit ? { built_at: edit.created_at, pieces: edit.items.length, notified_at: edit.notified_at, opened_at: edit.opened_at } : null,
+      todays_edition: edit ? await (async () => {
+        const sent = (await editPayload(user, edit)).items;
+        const ev = (await store.listEvents(user.id, { limit: 400 })).filter((e) => e.edit_id === edit.id);
+        const n = (a) => ev.filter((e) => e.action === a).length;
+        return { built_at: edit.created_at, pieces: edit.items.length, pieces_reaching_phone: sent.length,
+          pages: sent.map((i) => i.layout?.template || '-').join(' '),
+          notified_at: edit.notified_at, opened_at: edit.opened_at, finished_at: edit.finished_at,
+          on_the_phone: { loved: n('love'), passed: n('pass'), closer_looks: n('open'), photos_that_failed: n('imgfail') } };
+      })() : null,
       phones_with_notifications_on: (await store.listPush(user.id)).length,
       screenshots_waiting: (await store.listCaptures(user.id, { status: 'pending', limit: 50 })).length,
       keys_present: { anthropic: Boolean(process.env.ANTHROPIC_API_KEY), notifications: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
@@ -177,7 +185,7 @@ export default async (req) => {
       const events = (body.events || []).slice(0, 200).map((e) => ({
         user_id: user.id, item_id: e.item_id, action: e.action, context: e.context, edit_id: e.edit_id || null,
         ms: Number.isFinite(e.ms) ? Math.round(e.ms) : null,
-      })).filter((e) => ['love', 'pass', 'open', 'shop', 'most_you'].includes(e.action));
+      })).filter((e) => ['love', 'pass', 'open', 'shop', 'most_you', 'imgfail'].includes(e.action));
       await store.addEvents(events);
       return json({ ok: true, saved: events.length });
     }
