@@ -27,6 +27,7 @@ In Netlify: **Site configuration → Environment variables → Add a variable**.
 | `ANTHROPIC_API_KEY` | **console.anthropic.com → API Keys → Create Key** |
 | `ADMIN_KEY` | Make one up — a long password only you know. You'll use it to add friends and see numbers. |
 | `VAPID_SUBJECT` | `mailto:` followed by your email |
+| `CUTOUT_API_KEY` | Optional. A **remove.bg** API key (remove.bg → API). It cuts the background from photos so the Behind and Product pages work; without it every piece uses the Landscape or Printed tail page. About 14 images per person per night. |
 
 Then **Deploys → Trigger deploy → Deploy site** so the keys take effect.
 
@@ -70,6 +71,10 @@ Do yourself first and go through the whole thing on your phone before sending an
 - **Send someone a test notification:** `…&action=push&u=sophie`
 
 Every 15 minutes the site checks each person's time: it builds her edit about three hours before, and sends the notification at her chosen time.
+
+## How a night is built (design v2, 30 Sep 2026)
+
+Every night is an issue: a cover (masthead, number, day), then twelve pages. Each piece becomes one of four pages, chosen from its photo, never its category: **Behind** (a person, cut out, in front of the brand name), **Product** (an object, cut out, on cream), **Landscape** (a wide photo) or **Printed tail** (the fallback, always safe). The rules live in `lib/layout.mjs`: never the same page twice running, open on Behind or Tail, close on Landscape or Product. Cut-outs need `CUTOUT_API_KEY`; the phone falls back on its own when the server hasn't measured a photo (the first swipes, say).
 
 ## Changing things
 

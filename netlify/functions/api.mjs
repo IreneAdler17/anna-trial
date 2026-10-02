@@ -8,10 +8,12 @@ import { isAdmin, kickBackground, sizedImage, json, authUser, localNow, toMinute
 
 export const config = { path: '/api/*' };
 
-function publicItem(it) {
+function publicItem(it, layout = null) {
   if (!it) return null;
+  const lay = layout || it.layout || null;
   return { id: it.id, image_url: sizedImage(it.image_url, 900), brand: it.brand, name: it.name, price: it.price,
-    currency: it.currency, url: it.url, source: it.source };
+    currency: it.currency, url: it.url, source: it.source,
+    layout: lay ? { template: lay.template || null, aspect: lay.aspect ?? null, cutout: lay.cutout ? `/cutout/${lay.cutout}.png` : null } : null };
 }
 
 async function readBody(req) {
@@ -36,9 +38,13 @@ async function stateFor(user) {
 
 async function editPayload(user, edit) {
   const items = await store.getItems(edit.items.map((i) => i.item_id));
+  // The issue number: how many edits she has had up to and including this one.
+  const all = await store.listEdits(user.id, { limit: 400 });
+  const no = all.filter((e) => e.edit_date <= edit.edit_date).length || 1;
+  const weekday = new Date(`${edit.edit_date}T12:00:00`).toLocaleDateString('en-AU', { weekday: 'long' });
   return {
-    id: edit.id, date: edit.edit_date,
-    items: edit.items.map((i) => ({ ...publicItem(items[i.item_id]), bucket: i.bucket })).filter((i) => i.id && i.image_url),
+    id: edit.id, date: edit.edit_date, no, weekday,
+    items: edit.items.map((i) => ({ ...publicItem(items[i.item_id], i.template ? i : null), bucket: i.bucket })).filter((i) => i.id && i.image_url),
   };
 }
 
@@ -76,8 +82,46 @@ async function admin(req, url) {
   if (action === 'build') {
     const user = await store.getUser(url.searchParams.get('u'));
     if (!user) return json({ error: 'no such user' }, 404);
-    const edit = await buildEdit(user, localNow(user.tz).date);
-    return json({ ok: true, pieces: edit.items.length });
+    // Building takes a minute or two (Claude looks at the photos), longer than a web request may
+    // run: hand it to the background job on this same deploy and read the result with action=health.
+    if (url.searchParams.get('wait') !== '1') {
+      const status = await kickBackground('build-edits-background', { users: [user.id], force: true }, url.origin);
+      return json({ ok: status === 202 || status === 200, started: status, next: 'Give it two minutes, then open action=health&u=' + user.id });
+    }
+    try {
+      const edit = await buildEdit(user, localNow(user.tz).date);
+      return json({ ok: true, pieces: edit.items.length });
+    } catch (err) { return json({ ok: false, error: String(err.message || err).slice(0, 400) }, 500); }
+  }
+  if (action === 'health') {
+    // Everything needed to answer "why didn't my edition arrive?" — no keys, no links.
+    const user = await store.getUser(url.searchParams.get('u'));
+    if (!user) return json({ error: 'no such user' }, 404);
+    const { date, minutes } = localNow(user.tz);
+    const edit = await store.getEdit(user.id, date);
+    const hhmm = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+    const ticks = (await store.loadJson('_config/tick-log.json')) || [];
+    const builds = ((await store.loadJson('_config/build-log.json')) || []).filter((b) => !b.user || b.user === user.id);
+    return json({
+      her_time_now: `${date} ${hhmm}`, stage: user.stage, drop_time: user.drop_time, finished_setup: user.stage === 'ready' || Boolean(user.onboarded_at),
+      todays_edition: edit ? await (async () => {
+        const sent = (await editPayload(user, edit)).items;
+        const ev = (await store.listEvents(user.id, { limit: 400 })).filter((e) => e.edit_id === edit.id);
+        const n = (a) => ev.filter((e) => e.action === a).length;
+        return { built_at: edit.created_at, pieces: edit.items.length, pieces_reaching_phone: sent.length,
+          pages: sent.map((i) => i.layout?.template || '-').join(' '),
+          notified_at: edit.notified_at, opened_at: edit.opened_at, finished_at: edit.finished_at,
+          on_the_phone: { loved: n('love'), passed: n('pass'), closer_looks: n('open'), photos_that_failed: n('imgfail') } };
+      })() : null,
+      phones_with_notifications_on: (await store.listPush(user.id)).length,
+      screenshots_waiting: (await store.listCaptures(user.id, { status: 'pending', limit: 50 })).length,
+      keys_present: { anthropic: Boolean(process.env.ANTHROPIC_API_KEY), notifications: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+        cutouts: Boolean(process.env.CUTOUT_API_KEY) },
+      this_site: /deploy-preview/.test(url.host) ? 'preview' : /localhost/.test(url.host) ? 'local' : 'live',
+      timer_last_runs: ticks.slice(0, 5), builds_last: builds.slice(0, 6),
+      phone_reports: ((await store.loadJson(`_config/phone-${user.id}.json`)) || []).slice(0, 2),
+      timer_note: ticks.length ? null : 'No timer runs recorded yet: the timer only runs on the live site, and only records once this version is live.',
+    });
   }
   if (action === 'vapid') {
     // One-off: makes the notification key pair inside your own site, so the private key never leaves it.
@@ -97,10 +141,15 @@ async function admin(req, url) {
     return json(c ? { created_at: c.created_at, curated: c.curated, stale: c.stale,
       items: c.items.map((i) => `${i.attrs?.category || '?'} · ${i.brand || ''} · ${i.name || ''}`) } : { none: true });
   }
-  if (action === 'reset') {
+  if (action === 'reset' || action === 'open') {
     const user = await store.getUser(url.searchParams.get('u'));
     if (!user) return json({ error: 'no such user' }, 404);
-    await store.resetUser(user.id);
+    if (action === 'reset') await store.resetUser(user.id);
+    // ?go=1 (or action=open): straight into the app on whichever site this was opened on — the
+    // preview stays the preview. One bookmark on the phone replaces copying links about.
+    if (action === 'open' || url.searchParams.get('go') === '1') {
+      return new Response(null, { status: 302, headers: { location: `/?u=${user.id}&k=${user.key}`, 'cache-control': 'no-store' } });
+    }
     return json({ ok: true, link: `${siteUrl(req)}/?u=${user.id}&k=${user.key}` });
   }
   if (action === 'push') {
@@ -133,11 +182,19 @@ export default async (req) => {
         build: cached ? { at: cached.created_at, curated: cached.curated, note: cached.note, candidates: cached.candidates, count: cached.items.length } : null });
     }
 
+    if (route === 'clientlog' && req.method === 'POST') {
+      // What her phone did (screen states, touches, errors), kept for the admin health check.
+      await store.logLine(`_config/phone-${user.id}.json`, { v: String(body.v || '').slice(0, 20), home_screen: Boolean(body.home_screen),
+        screen: `${Number(body.w) || 0}x${Number(body.h) || 0}`, agent: String(req.headers.get('user-agent') || '').slice(0, 160),
+        trail: (Array.isArray(body.trail) ? body.trail : []).slice(-70).map((t) => String(t).slice(0, 160)) }, 4);
+      return json({ ok: true });
+    }
+
     if (route === 'events' && req.method === 'POST') {
       const events = (body.events || []).slice(0, 200).map((e) => ({
         user_id: user.id, item_id: e.item_id, action: e.action, context: e.context, edit_id: e.edit_id || null,
         ms: Number.isFinite(e.ms) ? Math.round(e.ms) : null,
-      })).filter((e) => ['love', 'pass', 'open', 'shop', 'most_you'].includes(e.action));
+      })).filter((e) => ['love', 'pass', 'open', 'shop', 'most_you', 'imgfail'].includes(e.action));
       await store.addEvents(events);
       return json({ ok: true, saved: events.length });
     }
