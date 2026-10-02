@@ -250,3 +250,9 @@ img.fit{mix-blend-mode:multiply;background:transparent!important}
 .more{background:none;border:0;padding:0;margin-top:18px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:8px;color:var(--ink)}
 .more .biglink{margin:0;display:block}
 .morebody{font-family:var(--sans);font-size:15px;line-height:1.4}
+
+/* 2 Oct, round j: fill the whole screen on the Home Screen; icon in night and red */
+html,body{height:var(--full,100%)}
+body{inset:0 0 auto 0}
+#app{inset:0 0 auto 0;height:var(--full,100%)}
+.glyph.appicon{background:#1B1A18;color:#C8452B;font-family:var(--display);font-style:normal;box-shadow:none}

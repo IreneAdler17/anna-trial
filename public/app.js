@@ -4,6 +4,14 @@ const $app = document.getElementById('app');
 const $photo = document.getElementById('photo-input');
 const qs = new URLSearchParams(location.search);
 const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+// On the Home Screen, iOS can lay the page out shorter than the screen (by the height of the status bar),
+// which leaves an empty strip along the bottom. Stretch the app to the real screen height when that happens.
+function fillScreen() {
+  const gap = isStandalone && innerHeight > innerWidth ? screen.height - innerHeight : 0;
+  document.documentElement.style.setProperty('--full', gap > 12 && gap < 90 ? screen.height + 'px' : '100%');
+  return gap;
+}
+addEventListener('resize', fillScreen); addEventListener('orientationchange', fillScreen);
 
 // ---------- who she is: ?u=<name>&k=<key> in her personal link ----------
 let AUTH = { u: qs.get('u'), k: qs.get('k') };
@@ -85,7 +93,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // ---------- breadcrumbs ----------
 // A short trail of what happened on this phone (renders, touches, errors), sent to the server so
 // "it froze" can be diagnosed from the admin health check. No personal content: only screen states.
-const BUILD = '2026-10-02i';
+const BUILD = '2026-10-02j';
 const trail = [];
 let trailDirty = false;
 function crumb(m) { trail.push(`${Math.round(performance.now())} ${m}`); if (trail.length > 70) trail.shift(); trailDirty = true; }
@@ -102,6 +110,7 @@ window.addEventListener('error', (e) => crumb(`ERROR ${e.message} @${String(e.fi
 window.addEventListener('unhandledrejection', (e) => crumb(`REJECTED ${e.reason?.message || e.reason}`));
 document.addEventListener('pointerdown', (e) => crumb(`touch on ${describe(e.target)}`), true);
 document.addEventListener('touchstart', (e) => crumb(`touchstart on ${describe(e.target)}`), { capture: true, passive: true });
+crumb(`screen ${screen.width}x${screen.height} inner ${innerWidth}x${innerHeight} standalone=${isStandalone} gap=${fillScreen()}`);
 
 // ---------- screen helpers ----------
 function show(html, cls = '') {
@@ -724,11 +733,10 @@ function screenEdit(edit) {
   $app.innerHTML = '<section class="deck" id="deck"></section>';
   const earlier = edit.items.filter((i) => keptIds.has(i.id)).map((i) => ({ ...i, _loved: true }));
   const items = edit.items.filter((i) => !decided.has(i.id));
-  const fresh = decided.size === 0; // the cover opens the issue only the first time she opens it
   let deck;
   const openDetail = (it) => closerLook(it, { context: 'edit', editId: edit.id, onKeep: () => deck.decide(1) });
   deck = Deck(document.getElementById('deck'), items, {
-    cover: fresh ? edit : null, hint: false, context: 'edit', editId: edit.id, onTap: openDetail,
+    cover: edit, hint: false, context: 'edit', editId: edit.id, onTap: openDetail,
     onDone: () => { flush(); api('edit/finished', { method: 'POST', body: {} }).catch(() => {}); screenEnd([...earlier, ...items.filter((i) => i._loved)]); },
   });
 }
